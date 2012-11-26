@@ -1,0 +1,58 @@
+AddDefaultCharset UTF-8
+Options -Indexes
+
+<Files ~ "\.xml$">
+    Order allow,deny
+    Deny from all
+    Satisfy All
+</Files>
+<Files sitemap.xml>
+		Order allow,deny
+    Allow from all
+    Satisfy All
+</Files>
+
+
+RewriteEngine on
+
+# Usually it RewriteBase is just '/', but 
+# replace it with your subdirectory path
+RewriteBase /
+
+#RewriteCond %{REQUEST_FILENAME} -f [OR]
+#RewriteCond %{REQUEST_FILENAME} -d
+#RewriteRule ^ - [L]
+#RewriteRule ^(.*):([a-z]+)([^a-z/][^/]*)?/?$ $1$3?lang=$2 [QSA,DPI]
+#RewriteRule ^(.*);(\d+)([^\d/][^/]*)?/?$ $1$3?page=$2 [QSA,DPI]
+#RewriteRule /?([A-Za-z0-9_-]+)/?$ index.php?id=$1 [QSA,L]
+#RewriteRule ^ index.php [L]
+
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^data/uploads/(.*)$ plugins/download_interceptor/intercept.php?file=$1 [L]
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+RewriteRule ^(en|de)/(nm)/(tag|post|page|archive)/([^/.]+)/?$ index.php?id=$2&$3=$4 [L]
+
+RewriteRule ^(en|de)/(.*)$ $2?lang=$1 [QSA,DPI,S=1]
+RewriteRule ^(.*):([a-z]+)([^a-z/][^/]*)?/?$ $1$3?lang=$2 [QSA,DPI,S=1]
+RewriteRule ^(.*):([a-z]+)([^a-z/][^/]*)?/?$ $1$3 [QSA,DPI]
+RewriteRule ^(.*);(\d+)([^\d/][^/]*)?/?$ $1$3?page=$2 [QSA,DPI]
+RewriteRule /?([A-Za-z0-9_-]+)/?$ index.php?id=$1 [QSA,L]
+RewriteRule ^ index.php [L]
+
+#RewriteRule ^(en|de)/(.*?/)?([A-Za-z0-9_-]+)/?$ index.php?id=$3&lang=$1 [QSA,L]
+#RewriteCond %{REQUEST_FILENAME} !-f
+#RewriteCond %{REQUEST_FILENAME} !-d
+#RewriteRule /?([A-Za-z0-9_-]+);(\d+)/?$ index.php?id=$1&page=$2 [QSA,L]
+#RewriteCond %{REQUEST_FILENAME} !-f
+#RewriteCond %{REQUEST_FILENAME} !-d
+#RewriteRule /?([A-Za-z0-9_-]+);([a-z]+)/?$ index.php?id=$1&lang=$2 [QSA,L]
+#RewriteCond %{REQUEST_FILENAME} !-f
+#RewriteCond %{REQUEST_FILENAME} !-d
+#RewriteRule /?([A-Za-z0-9_-]+)/?$ index.php?id=$1 [QSA,L]
+#RewriteRule ^data/uploads/(.*\.png)$ image.php?file=$1 [L]
+#RewriteRule ^data/uploads/(.*)$ plugins/download_interceptor/intercept.php?file=$1 [L]
+
