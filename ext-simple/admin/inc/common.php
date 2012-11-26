@@ -122,3 +122,7 @@ function tsl($path) {
   return substr($path,-1) == '/' ? $path : $path.'/'; 
 }
 
+function is_debug() {
+  return defined('ES_DEBUG') && ES_DEBUG;
+}
+
