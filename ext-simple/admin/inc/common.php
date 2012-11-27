@@ -126,3 +126,10 @@ function is_debug() {
   return defined('ES_DEBUG') && ES_DEBUG;
 }
 
+function is_frontend() {
+  
+}
+
+function is_backend() {
+  
+}
