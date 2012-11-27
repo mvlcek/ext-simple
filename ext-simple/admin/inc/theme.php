@@ -21,7 +21,7 @@ function put_navigation($slug=null, $minlevel=0, $maxlevel=99, $type=null, $opti
 }
 
 function put_title($html=false) {
-  put_field('title', $html);
+  return put_field('title', $html);
 }
 
 function put_content() {
@@ -30,6 +30,7 @@ function put_content() {
   $content = execFilter('filter-content', array($content));
   echo $content;
   execAction('after-content');
+  return $content !== null && $content !== '';
 }
 
 function put_footer($type=null, $options=null) {
@@ -46,36 +47,71 @@ function put_field($name, $html=false) {
   if ($value !== null) {
     echo $html ? $value : htmlspecialchars($value);
   }
+  return $value !== null && $value !== '';
 }
 
-function put_date_field($name, $format) {
-  
+function put_date_field($name, $format=null) {
+  if ($format) {
+    $fmt = getString('DATE_FORMAT_'.$format);
+    if (!$fmt) $fmt = $format;
+  } else {
+    $fmt = getString('DATE_FORMAT');
+    if (!$fmt) $fmt = '%Y-%m-%d %H:%M:%S';
+  }
+  $date = get_field_as_timestamp($name);
+  if ($date) echo strftime($format, $date);
+  return (bool) $date;
 }
 
 function put_page_field($slug, $name, $html=false) {
-  
+  $value = get_page_field($slug, $name);
+  if ($value !== null) {
+    echo $html ? $value : htmlspecialchars($value);
+  }
+  return $value !== null && $value !== '';
 }
 
 function put_page_date_field($slug, $name, $format) {
+  if ($format) {
+    $fmt = getString('DATE_FORMAT_'.$format);
+    if (!$fmt) $fmt = $format;
+  } else {
+    $fmt = getString('DATE_FORMAT');
+    if (!$fmt) $fmt = '%Y-%m-%d %H:%M:%S';
+  }
+  $date = get_page_field_as_timestamp($slug, $name);
+  if ($date) echo strftime($format, $date);
+  return (bool) $date;
+}
+
+function put_component($name) {
   
 }
 
 function get_slug() {
-  
+  $page = getPage();
+  return $page ? $page->getSlug() : null;
 }
 
 function get_field($name) {
-  
+  $page = getPage();
+  return $page ? $page->getField($name, getLanguage()) : null;
 }
 
-function get_date_field_as_timestamp($name) {
-  
+function get_field_as_timestamp($name) {
+  $value = get_field($name);
+  return !is_numeric($value) ? strtotime($value): (int) $value;  
 }
 
 function get_page_field($slug, $name) {
-  
+  return Cache::getField($slug, $name, getLanguage());
 }
 
-function get_page_date_field_as_timestamp($slug, $name) {
+function get_page_field_as_timestamp($slug, $name) {
+  $value = getPageField($slug, $name);
+  return !is_numeric($value) ? strtotime($value): (int) $value;  
+}
+
+function get_component($name) {
   
 }

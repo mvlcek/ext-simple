@@ -13,19 +13,23 @@ Init::definePaths();
 
 class Init {
   
+  private static $isFrontend = null;
+  
   static public function definePaths() {
     $pos = strrpos(dirname(__FILE__),DIRECTORY_SEPARATOR.'inc');
     $adm = substr(dirname(__FILE__), 0, $pos);
     define('ES_ADMINPATH', tsl($adm));
     $pos = strrpos($adm, DIRECTORY_SEPARATOR);
     define('ES_ROOTPATH', tsl(__FILE__, 0 , $pos));
-    define('ES_DATAPATH', GSROOTPATH.'data/');
-    define('ES_PAGEPATH', GSROOTPATH. 'data/pages/');
-    define('ES_UPLOADPATH', GSROOTPATH. 'data/uploads/');
-    define('ES_THUMBNAILSPATH', GSROOTPATH. 'data/thumbs/');
-    define('ES_BACKUPPATH', GSROOTPATH. 'backups/');
-    define('ES_THEMEPATH', GSROOTPATH. 'theme/');
-    define('ES_USERPATH', GSROOTPATH. 'data/users/');
+    define('ES_DATAPATH', ES_ROOTPATH.'data/');
+    define('ES_SETTINGSPATH', ES_DATAPATH.'other');
+    define('ES_USERSPATH', ES_DATAPATH. 'users/');
+    define('ES_PAGESPATH', ES_DATAPATH. 'pages/');
+    define('ES_UPLOADSPATH', ES_DATAPATH. 'uploads/');
+    define('ES_THUMBNAILSPATH', ES_DATAPATH. 'thumbs/');
+    define('ES_BACKUPPATH', ES_ROOTPATH. 'backups/');
+    define('ES_THEMESPATH', ES_ROOTPATH. 'theme/');
+    define('ES_PLUGINSPATH', ES_ROOTPATH.'plugins/');
   }
 
   static public function stripSlashesFromParam($value) {
@@ -36,6 +40,21 @@ class Init {
     } else {
       return stripslashes($value);
     }
+  }
+  
+  static public function isFrontend() {
+    if (self::$isFrontend === null) {
+      self::$isFrontend = ($_SERVER['SCRIPT_NAME'] == ES_ROOTPATH.'index.php');
+    }
+    return self::$isFrontend;
+  }
+
+  static public function setLanguage() {
+    
+  }
+  
+  static public function setTimezone() {
+    
   }
   
 }
@@ -53,11 +72,11 @@ class I18N {
   function loadPlugin($plugin, $lang=null) {
     global $LANG;
     if (!$lang) $lang = $LANG;
-    if (!file_exists(GSPLUGINPATH.$plugin.'/lang/'.$lang.'.php')) {
+    if (!file_exists(ES_PLUGINSPATH.$plugin.'/lang/'.$lang.'.php')) {
       return false;
     }
     $i18n = array();
-    @include(GSPLUGINPATH.$plugin.'/lang/'.$lang.'.php'); 
+    @include(ES_PLUGINSPATH.$plugin.'/lang/'.$lang.'.php'); 
     if (count($i18n) > 0) foreach ($i18n as $code => $text) {
       if (!array_key_exists($plugin.'/'.$code, I18N::$i18n)) {
         I18N::$i18n[$plugin.'/'.$code] = $text;
@@ -66,34 +85,57 @@ class I18N {
     return true;
   }
 
-  static public function get($name) {
-    if (array_key_exists($name, I18N::$i18n)) return I18N::$i18n[$name];
-    return '{'.$name.'}';
+  static public function get($name, $args=null) {
+    if (array_key_exists($name, I18N::$i18n)) {
+      $msg = I18N::$i18n[$name];
+      if (is_array($args)) $msg = vsprintf($msg, $args);
+      return $msg;
+    } else {
+      return '{'.$name.'}';
+    }
   }
 
 }
 
 
 /**
- * output the localized string
+ * output the localized formatted string 
  * 
  * @since 1.0
  * @author mvlcek
  * @param string $name
+ * @param varargs $args
  */
-function i18n($name) {
-  echo I18N::get($name);
+function putString($name, $args) {
+  $args = func_get_args();
+  array_shift($args);
+  echo I18N::get($name, $args);
+}
+
+function putS($name, $args) {
+  $args = func_get_args();
+  array_shift($args);
+  echo I18N::get($name, $args);
 }
 
 /**
- * return the localized string
+ * return the localized formatted string
  *
  * @since 1.0
  * @author mvlcek
  * @param string $name
+ * @param varargs $args
  */
-function i18n_r($name) {
-  return I18N::get($name);
+function getString($name, $args) {
+  $args = func_get_args();
+  array_shift($args);
+  return I18N::get($name, $args);
+}
+
+function getS($name, $args) {
+  $args = func_get_args();
+  array_shift($args);
+  return I18N::get($name, $args);
 }
 
 /**
@@ -107,7 +149,7 @@ function i18n_r($name) {
  * @param string $language, default=null
  * @return bool
  */
-function i18n_merge($plugin, $language=null) {
+function loadStrings($plugin, $language=null) {
   return I18N::loadPlugin($plugin, $language);
 }
 
@@ -122,14 +164,18 @@ function tsl($path) {
   return substr($path,-1) == '/' ? $path : $path.'/'; 
 }
 
-function is_debug() {
+function isDebug() {
   return defined('ES_DEBUG') && ES_DEBUG;
 }
 
-function is_frontend() {
-  
+function isFrontend() {
+  return Init::isFrontend();
 }
 
-function is_backend() {
-  
+function isBackend() {
+  return !isFrontend();
+}
+
+function getLanguage() {
+  // TODO
 }
