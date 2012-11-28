@@ -4,17 +4,17 @@ class DataFile {
   
   static public function getBackupFilename($filename) {
     if (!substr($filename,0,strlen(ES_DATAPATH)) == ES_DATAPATH) return false;
-    return BACKUPSPATH.substr($filename,strlen(ES_DATAPATH));
+    return ES_BACKUPPATH.substr($filename,strlen(ES_DATAPATH));
   }
   
   static public function getFilename($backupFilename) {
-    if (!substr($backupFilename,0,strlen(ES_BACKUPSPATH)) == ES_BACKUPSPATH) return false;
-    return ES_DATAPATH.substr($backupFilename,strlen(ES_BACKUPSPATH));
+    if (!substr($backupFilename,0,strlen(ES_BACKUPPATH)) == ES_BACKUPPATH) return false;
+    return ES_DATAPATH.substr($backupFilename,strlen(ES_BACKUPPATH));
   }
   
   /* on success returns the backup filename */
   static public function backup($filename) {
-    if (!($backupFilename = getBackupFilename($filename))) return false;
+    if (!($backupFilename = self::getBackupFilename($filename))) return false;
     if (copy($filename, $backupFilename)) return $backupFilename;
     return false;
   }
@@ -28,7 +28,7 @@ class DataFile {
   
   /* on success returns true or the backup filename */
   static public function restore($backupFilename) {
-    if (!($filename = getFilename($backupFilename))) return false;
+    if (!($filename = self::getFilename($backupFilename))) return false;
     if (!file_exists($backupFilename)) return false;
     if (!file_exists($filename)) {
       return rename($backupFilename, $filename);
@@ -36,13 +36,19 @@ class DataFile {
       // we created a temporary backup of the original file...
       if (rename($backupFilename, $filename)) {
         // ... and rename it to the backup file
-        return rename($backupFilename.'.tmp', $backupFilename) ? $backupFilename : true;
+        if (rename($backupFilename.'.tmp', $backupFilename)) {
+          return $backupFilename;
+        } else {
+          @unlink($backupFilename.'.tmp');
+          return true;
+        }
       } else {
-        // ... and delete it again
-        unlink($backupFilename.'.tmp');
+        // ... and rename back
+        @rename($backupFilename.'.tmp', $filename);
         return false;
       }
     } else {
+      @unlink($filename);
       // backup of existing file failed, just overwrite:
       return rename($backupFilename, $filename);
     }
@@ -72,9 +78,10 @@ class XmlFile extends DataFile {
   
   /* on success returns true or the backup filename */
   public function save($filename, $backup=true) {
-    $backupFilename = $backup ? self::backup($filename) : null;
+    $backupFilename = $backup ? self::backup($filename) : true;
     $success = $this->root->asXML($filename) === TRUE;
     self::setAttribs($filename);
+    return $success ? $backupFilename : false;
   }
   
 }

@@ -22,13 +22,13 @@ class Init {
     $pos = strrpos($adm, DIRECTORY_SEPARATOR);
     define('ES_ROOTPATH', tsl(__FILE__, 0 , $pos));
     define('ES_DATAPATH', ES_ROOTPATH.'data/');
-    define('ES_SETTINGSPATH', ES_DATAPATH.'other');
-    define('ES_USERSPATH', ES_DATAPATH. 'users/');
-    define('ES_PAGESPATH', ES_DATAPATH. 'pages/');
-    define('ES_UPLOADSPATH', ES_DATAPATH. 'uploads/');
-    define('ES_THUMBNAILSPATH', ES_DATAPATH. 'thumbs/');
-    define('ES_BACKUPPATH', ES_ROOTPATH. 'backups/');
-    define('ES_THEMESPATH', ES_ROOTPATH. 'theme/');
+    define('ES_SETTINGSPATH', ES_DATAPATH.'other/');
+    define('ES_USERSPATH', ES_DATAPATH.'users/');
+    define('ES_PAGESPATH', ES_DATAPATH.'pages/');
+    define('ES_UPLOADSPATH', ES_DATAPATH.'uploads/');
+    define('ES_THUMBNAILSPATH', ES_DATAPATH.'thumbs/');
+    define('ES_BACKUPPATH', ES_ROOTPATH.'backups/');
+    define('ES_THEMESPATH', ES_ROOTPATH.'theme/');
     define('ES_PLUGINSPATH', ES_ROOTPATH.'plugins/');
   }
 
@@ -177,5 +177,9 @@ function isBackend() {
 }
 
 function getLanguage() {
+  // TODO
+}
+
+function getDefaultLanguage() {
   // TODO
 }

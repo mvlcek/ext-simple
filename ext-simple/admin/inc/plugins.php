@@ -55,9 +55,15 @@ class Plugins {
     );
   }
   
+  public static function callFunction($name, $args) {
+    $pos = strpos($name, '::');
+    $fct = $pos >= 0 ? array(substr($name,0,$pos), substr($name, $pos+2)) : $name;
+    return call_user_func_array($fct, $args); 
+  }
+  
   private static function callListener($listener, $args) {
     if (is_debug()) Log::debug('Calling listener %s of plugin %s.', $listener['function'], $listener['plugin']);
-    return call_user_func_array($listener['function'], array_merge($args, $listener['args']));
+    return self::callFunction($listener['function'], array_merge($args, $listener['args']));
   }
   
   public static function execAction($hook, $args=null) {
@@ -123,6 +129,7 @@ foreach ($enabledPlugins as $name) {
   }
 }
 unset($enabledPlugins);
+unset($name);
 
 function registerPlugin($id, $name, $version=null, $author=null, $website=null, $description=null, $tab=null, $callback=null) {
   Plugins::registerPlugin($id, $name, $version, $author, $website, $description, $tab, $callback);

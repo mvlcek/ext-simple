@@ -42,15 +42,18 @@ function put_footer($type=null, $options=null) {
   execAction('after-footer');
 }
 
-function put_field($name, $html=false) {
+function put_field($name, $html=false, $default=null) {
   $value = get_field($name);
-  if ($value !== null) {
+  if ($value !== null && $value !== '') {
     echo $html ? $value : htmlspecialchars($value);
+    return true;
+  } else {
+    if ($default !== null) echo $default;
+    return false;
   }
-  return $value !== null && $value !== '';
 }
 
-function put_date_field($name, $format=null) {
+function put_date_field($name, $format=null, $default=null) {
   if ($format) {
     $fmt = getString('DATE_FORMAT_'.$format);
     if (!$fmt) $fmt = $format;
@@ -59,8 +62,13 @@ function put_date_field($name, $format=null) {
     if (!$fmt) $fmt = '%Y-%m-%d %H:%M:%S';
   }
   $date = get_field_as_timestamp($name);
-  if ($date) echo strftime($format, $date);
-  return (bool) $date;
+  if ($date) {
+    echo strftime($format, $date);
+    return true;
+  } else {
+    if ($default !== null) echo $default;
+    return false;
+  }
 }
 
 function put_page_field($slug, $name, $html=false) {
@@ -84,9 +92,22 @@ function put_page_date_field($slug, $name, $format) {
   return (bool) $date;
 }
 
+if (!function_exists('get_page_field')) {
+  function get_page_field($slug, $name) {
+    $page = new Page($slug, true);
+    return $page ? $page->getField($name, getLanguage()) : null;
+  }
+}
+
+function get_page_field_as_timestamp($slug, $name) {
+  $value = get_page_field($slug, $name);
+  return !is_numeric($value) ? strtotime($value): (int) $value;  
+}
+
 function put_component($name) {
   
 }
+
 
 function get_slug() {
   $page = getPage();
@@ -100,15 +121,6 @@ function get_field($name) {
 
 function get_field_as_timestamp($name) {
   $value = get_field($name);
-  return !is_numeric($value) ? strtotime($value): (int) $value;  
-}
-
-function get_page_field($slug, $name) {
-  return Cache::getField($slug, $name, getLanguage());
-}
-
-function get_page_field_as_timestamp($slug, $name) {
-  $value = getPageField($slug, $name);
   return !is_numeric($value) ? strtotime($value): (int) $value;  
 }
 
