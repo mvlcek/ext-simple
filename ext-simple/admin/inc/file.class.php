@@ -54,12 +54,53 @@ class DataFile {
     }
   }
   
-  static public function setAttribs($filename) {
-    if (defined('ES_CHMOD')) chmod($filename, ES_CHMOD);
-    if (defined('ES_CHOWN')) chown($filename, ES_CHOWN);
+  static public function setAttributes($filename) {
+    if (defined('ES_FILE_MOD')) chmod($filename, ES_FILE_MOD);
+    if (defined('ES_FILE_OWNER')) chown($filename, ES_FILE_OWNER);
   }
   
 }
+
+
+class DataDir {
+  
+  static public function setAttributes($dirname) {
+    if (defined('ES_DIR_MOD')) chmod($dirname, ES_DIR_MOD);
+    if (defined('ES_DIR_OWNER')) chown($dirname, ES_DIR_OWNER);
+  }
+  
+  static public function create($dirname) {
+    $parent = dirname($dirname);
+    if ($parent != '.' && !file_exists($parent)) {
+      if (!self::create($parent)) return false;
+    }
+    if (mkdir($dirname)) {
+      self::setAttributes($dirname);
+      return true;
+    } else {
+      return false;
+    }
+  }
+  
+  static public function delete($dirname, $recursive=false) {
+    if (file_exists($dirname) && is_dir($dirname)) {
+      if ($recursive) {
+        $dir = opendir($dirname);
+        while (($name = readdir($dir)) !== false) {
+          if (!is_dir($dirname.'/'.$name)) {
+            unlink($dirname.'/'.$name);
+          } else if ($name != '.' && $name != '..') {
+            self::delete($dirname.'/'.$name);
+          }
+        }
+        closedir($dir);
+      }
+      return rmdir($dirname);    
+    }
+  }
+  
+}
+
 
 class XmlFile extends DataFile {
 
@@ -79,9 +120,12 @@ class XmlFile extends DataFile {
   /* on success returns true or the backup filename */
   public function save($filename, $backup=true) {
     $backupFilename = $backup ? self::backup($filename) : true;
-    $success = $this->root->asXML($filename) === TRUE;
-    self::setAttribs($filename);
-    return $success ? $backupFilename : false;
+    if ($this->root->asXML($filename) === TRUE) {
+      self::setAttributes($filename);
+      return $backupFilename;
+    } else {
+      return false;
+    }
   }
   
 }

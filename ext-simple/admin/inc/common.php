@@ -10,6 +10,7 @@ if (get_magic_quotes_gpc()) {
 }
 
 Init::definePaths();
+require_once(ES_ROOTPATH.'esconfig.php');
 
 class Init {
   

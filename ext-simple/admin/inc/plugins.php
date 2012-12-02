@@ -158,3 +158,7 @@ function execWhile($hook, $args=null, $whileValue=null) {
 function execForInfo($hook, $args=null) {
   return Plugins::execForInfo($hook, $args);
 }
+
+function isInPlugin($name) {
+  return basename($_SERVER['PHP_SELF']) == 'load.php' && @$_GET['id'] == $name;
+}
