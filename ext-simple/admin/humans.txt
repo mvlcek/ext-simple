@@ -1,0 +1,11 @@
+/* TEAM */
+  Lead Developer: Martin Vlcek
+  Forum Handle: mvlcek
+  Site: http://mvlcek.bplaced.net/
+  Location: Austria
+
+/* THANKS */
+  Concept based on GetSimple (http://get-simple.info):
+  - Chris Cagle
+  - Mike Swan
+  - Matthew Phillips 

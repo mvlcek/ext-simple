@@ -15,16 +15,16 @@ class Plugins {
     return file_put_contents(ES_SETTINGSPATH.'plugins.txt', implode(PHP_EOL, $plugins)) !== false;
   }
 
-  public static function enablePlugin($name) {
+  public static function enablePlugin($id) {
     $plugins = self::getEnabledPlugins();
-    $index = array_search($name, $plugins);
+    $index = array_search($id, $plugins);
     if ($index !== false) unset($plugins[$index]);
     self::setEnabledPlugins($plugins);
   }
   
-  public static function disablePlugin($name) {
+  public static function disablePlugin($id) {
     $plugins = self::getEnabledPlugins();
-    if (!in_array($name, $plugins)) $plugins[] = $name;
+    if (!in_array($id, $plugins)) $plugins[] = $id;
     self::setEnabledPlugins($plugins);
   }
 
@@ -39,6 +39,10 @@ class Plugins {
       'callback' => $callback
     );
     self::$currentPlugin = $id;
+  }
+  
+  public static function getPlugin($name) {
+    return self::$plugins[$name];
   }
   
   public static function setAllowListeners($allow) {
@@ -133,6 +137,10 @@ unset($name);
 
 function registerPlugin($id, $name, $version=null, $author=null, $website=null, $description=null, $tab=null, $callback=null) {
   Plugins::registerPlugin($id, $name, $version, $author, $website, $description, $tab, $callback);
+}
+
+function getPlugin($id) {
+  return Plugins::getPlugin($id);
 }
 
 function addListener($hook, $function, $args=null) {

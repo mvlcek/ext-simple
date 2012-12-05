@@ -1,25 +1,19 @@
 <?php
 
-/**
- * Create Side Menu
- *
- * This adds a side level link to a control panel's section
- *
- * @since 2.0
- * @uses $plugins
- *
- * @param string $id ID of the link you are adding
- * @param string $txt Text to add to tabbed link
- */
-
-function put_menu_entry($id, $txt, $action=null, $always=true){
-  $current = false;
-  if (isset($_GET['id']) && $_GET['id'] == $id && (!$action || isset($_GET[$action]))) {
-    $current = true;
+class TemplateHelper {
+  
+  function getAccessKey($text) {
+    if (preg_match('/<em>(\w)<\/em>/', $text, $match)) {
+      $c = $match[1];
+      return function_exists('mb_strtolower') ? mb_strtolower($c) : strtolower($c); 
+    }
+    return null;
   }
-  if ($always || $current) {
-    echo '<li id="sb_'.$id.'"><a href="load.php?id='.$id.($action ? '&amp;'.$action : '').'" '.($current ? 'class="current"' : '').' >'.$txt.'</a></li>';
+  
+  function getLanguage() {
+    return Settings::get('language', 'en_US');
   }
+  
 }
 
 /**
@@ -27,19 +21,62 @@ function put_menu_entry($id, $txt, $action=null, $always=true){
  *
  * This adds a top level tab to the control panel
  *
- * @since 2.0
- * @uses $plugins
- *
- * @param string $id Id of current page
- * @param string $txt Text to add to tabbed link
- * @param string $klass class to add to a element
+ * @param string $tabname  the name of the tab
+ * @param string $id       ID of current page
+ * @param string $txt      text of the tab
+ * @param string $action   further parameter for the link
  */
 function put_menu_tab($tabname, $id, $txt, $action=null) {
-  global $plugin_info;
   $current = false;
   if (basename($_SERVER['PHP_SELF']) == 'load.php') {
-    $plugin_id = @$_GET['id'];
-    if ($plugin_info[$plugin_id]['page_type'] == $tabname) $current = true;
+    $plugin = getPlugin(@$_GET['id']);
+    if ($plugin['tab'] == $tabname) $current = true;
   }
-  echo '<li id="nav_'.$id.'"><a href="load.php?id='.$id.($action ? '&amp;'.$action : '').'" '.($current ? 'class="current"' : '').' >'.$txt.'</a></li>';
+  $linkId = 'nav_'.$id.($action ? '_'.$action : '');
+  $accessKey = TemplateHelper::getAccessKey($txt);
+  echo '<li id="'.$linkId.'"><a href="load.php?id='.$id.($action ? '&amp;'.$action : '').'"'.($current ? ' class="current"' : '').($accessKey ? ' accesskey="'.$accessKey.'"' : '').'>'.$txt.'</a></li>';
 }
+
+function put_es_menu_tab($script, $txt, $current=false) {
+  $linkId = 'nav_es_'.basename($script,'.php');
+  $accessKey = TemplateHelper::getAccessKey($txt);
+  echo '<li id="'.$linkId.'"><a href="'.$script.'"'.($current ? ' class="current"' : '').($accessKey ? ' accesskey="'.$accessKey.'"' : '').'>'.$txt.'</a></li>';
+}
+
+
+/**
+ * Create a (side) menu entry
+ *
+ * This adds a side level link to a control panel's section
+ *
+ * @param string $id      ID of the plugin
+ * @param string $txt     text of the menu entry
+ * @param string $action  further parameter for the link
+ * @param string $always  set to false, if the menu entry should only be shown when active
+ */
+function put_menu_entry($id, $txt, $action=null, $always=true){
+  $current = false;
+  if (isset($_GET['id']) && $_GET['id'] == $id && (!$action || isset($_GET[$action]))) {
+    $current = true;
+  }
+  $linkId = 'sb_'.$id.($action ? '_'.$action : '');
+  $accessKey = TemplateHelper::getAccessKey($txt);
+  if ($always || $current) {
+    echo '<li id="'.$linkId.'"><a href="load.php?id='.$id.($action ? '&amp;'.$action : '').'"'.($current ? ' class="current"' : '').($accessKey ? ' accesskey="'.$accessKey.'"' : '').'>'.$txt.'</a></li>';
+  }
+}
+
+
+function put_es_menu_entry($script, $txt, $always=true) {
+  $current = false;
+  if (basename($_SERVER['PHP_SELF']) == $script) {
+    $current = true;
+  }
+  $linkId = 'sb_es_'.basename($script,'.php');
+  $accessKey = TemplateHelper::getAccessKey($txt);
+  if ($always || $current) {
+    echo '<li id="'.$linkId.'"><a href="'.$script.'"'.($current ? ' class="current"' : '').($accessKey ? ' accesskey="'.$accessKey.'"' : '').'>'.$txt.'</a></li>';
+  }
+}
+
+

@@ -7,6 +7,7 @@ advantages:
  - actions and filters generalized - more usage scenarios
  - hierarchical navigation by default
  - themes have config.php for dependencies, etc.
+ - no addslashes, htmlentities, no cdata - just storing and retrieving data from XML
  
  
  

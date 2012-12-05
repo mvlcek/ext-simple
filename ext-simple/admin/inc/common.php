@@ -1,6 +1,7 @@
 <?php
 
 define('ES_VERSION', '1.0');
+define('IN_ES', true);
 
 // workaround if magic quotes is turned on
 if (get_magic_quotes_gpc()) {
@@ -11,6 +12,7 @@ if (get_magic_quotes_gpc()) {
 
 Init::definePaths();
 require_once(ES_ROOTPATH.'esconfig.php');
+require_once(ES_ADMINPATH.'inc/file.class.php');
 
 class Init {
   
@@ -61,7 +63,7 @@ class Init {
 }
 
 
-class I18N {
+class I18nHelper {
 
   static private $i18n = array();
   
@@ -79,16 +81,16 @@ class I18N {
     $i18n = array();
     @include(ES_PLUGINSPATH.$plugin.'/lang/'.$lang.'.php'); 
     if (count($i18n) > 0) foreach ($i18n as $code => $text) {
-      if (!array_key_exists($plugin.'/'.$code, I18N::$i18n)) {
-        I18N::$i18n[$plugin.'/'.$code] = $text;
+      if (!array_key_exists($plugin.'/'.$code, self::$i18n)) {
+        self::$i18n[$plugin.'/'.$code] = $text;
       }
     }
     return true;
   }
 
   static public function get($name, $args=null) {
-    if (array_key_exists($name, I18N::$i18n)) {
-      $msg = I18N::$i18n[$name];
+    if (array_key_exists($name, self::$i18n)) {
+      $msg = self::$i18n[$name];
       if (is_array($args)) $msg = vsprintf($msg, $args);
       return $msg;
     } else {
@@ -107,16 +109,10 @@ class I18N {
  * @param string $name
  * @param varargs $args
  */
-function putString($name, $args) {
+function put_i18n($name, $args) {
   $args = func_get_args();
   array_shift($args);
-  echo I18N::get($name, $args);
-}
-
-function putS($name, $args) {
-  $args = func_get_args();
-  array_shift($args);
-  echo I18N::get($name, $args);
+  echo I18nHelper::get($name, $args);
 }
 
 /**
@@ -127,16 +123,10 @@ function putS($name, $args) {
  * @param string $name
  * @param varargs $args
  */
-function getString($name, $args) {
+function get_i18n($name, $args) {
   $args = func_get_args();
   array_shift($args);
-  return I18N::get($name, $args);
-}
-
-function getS($name, $args) {
-  $args = func_get_args();
-  array_shift($args);
-  return I18N::get($name, $args);
+  return I18nHelper::get($name, $args);
 }
 
 /**
@@ -151,7 +141,7 @@ function getS($name, $args) {
  * @return bool
  */
 function loadStrings($plugin, $language=null) {
-  return I18N::loadPlugin($plugin, $language);
+  return I18nHelper::loadPlugin($plugin, $language);
 }
 
 /**
