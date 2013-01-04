@@ -15,7 +15,7 @@ class ESFileTests extends ESTestCase {
     $xml = '<content>';
     foreach ($this->attrs as $key => $value) $xml .= "<$key>".htmlspecialchars($value)."</$key>";
     $xml .= '</content>';
-    $file = new XmlFile($xml);
+    $file = new XmlFile(null, $xml);
     foreach ($this->attrs as $key => $value) {
       $this->assertEqual((string) $file->root->$key, $value);
     }
@@ -23,7 +23,7 @@ class ESFileTests extends ESTestCase {
   
   function testCreateSaveAndLoad() {
     $this->mkdir(ES_DATAPATH);
-    $file = new XmlFile('<content></content>');
+    $file = new XmlFile(null, '<content></content>');
     foreach ($this->attrs as $key => $value) {
       $file->root->$key = $value;
     }
@@ -42,7 +42,7 @@ class ESFileTests extends ESTestCase {
     $this->mkdir(ES_DATAPATH);
     $this->mkdir(ES_BACKUPPATH);
     # create a new file
-    $file = new XmlFile('<content></content>');
+    $file = new XmlFile(null, '<content></content>');
     foreach ($this->attrs as $key => $value) {
       $key2 = $key;
       $file->root->$key = $value;

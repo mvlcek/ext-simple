@@ -93,7 +93,7 @@ class Plugins {
     $result = null;
     foreach (self::$listeners[$hook] as $listener) {
       $result = self::callListener($listener, $args);
-      if ($result == $untilValue) return $result;
+      if ($result === $untilValue) return $result;
     }
     return $result;
   }
@@ -104,7 +104,7 @@ class Plugins {
     $result = null;
     foreach (self::$listeners[$hook] as $listener) {
       $result = self::callListener($listener, $args);
-      if ($result != $whileValue) return $result;
+      if ($result !== $whileValue) return $result;
     }
     return $result;
   }

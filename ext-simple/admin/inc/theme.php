@@ -20,8 +20,8 @@ function put_navigation($slug=null, $minlevel=0, $maxlevel=99, $type=null, $opti
   execAction('after-navigation');
 }
 
-function put_title($html=false) {
-  return put_field('title', $html);
+function put_title() {
+  return put_field('title', false);
 }
 
 function put_content() {
@@ -40,6 +40,10 @@ function put_footer($type=null, $options=null) {
     // empty for now
   }
   execAction('after-footer');
+}
+
+function put_slug() {
+  echo htmlspecialchars(get_slug());
 }
 
 function put_field($name, $html=false, $default=null) {
@@ -92,18 +96,6 @@ function put_page_date_field($slug, $name, $format) {
   return (bool) $date;
 }
 
-if (!function_exists('get_page_field')) {
-  function get_page_field($slug, $name) {
-    $page = new Page($slug, true);
-    return $page ? $page->getField($name, getLanguage()) : null;
-  }
-}
-
-function get_page_field_as_timestamp($slug, $name) {
-  $value = get_page_field($slug, $name);
-  return !is_numeric($value) ? strtotime($value): (int) $value;  
-}
-
 function put_component($name) {
   
 }
@@ -121,6 +113,18 @@ function get_field($name) {
 
 function get_field_as_timestamp($name) {
   $value = get_field($name);
+  return !is_numeric($value) ? strtotime($value): (int) $value;  
+}
+
+if (!function_exists('get_page_field')) {
+  function get_page_field($slug, $name) {
+    $page = new Page($slug, true);
+    return $page ? $page->getField($name, getLanguage()) : null;
+  }
+}
+
+function get_page_field_as_timestamp($slug, $name) {
+  $value = get_page_field($slug, $name);
   return !is_numeric($value) ? strtotime($value): (int) $value;  
 }
 

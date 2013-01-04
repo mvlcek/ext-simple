@@ -23,5 +23,5 @@ if ($what != 'index') exec_action('before-admin-template');
 </head>
 <body class="<?php echo $what; ?>" > 
   <div class="header" id="header" >
-    <div class="wrapper clearfix">
+    <div class="navigation">
  <?php exec_action('header-body'); ?>

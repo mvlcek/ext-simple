@@ -2,6 +2,10 @@
 
 class DataFile {
   
+  static public function exists($filename) {
+    return file_exists($filename);
+  }
+  
   static public function getBackupFilename($filename) {
     if (!substr($filename,0,strlen(ES_DATAPATH)) == ES_DATAPATH) return false;
     return ES_BACKUPPATH.substr($filename,strlen(ES_DATAPATH));
@@ -104,29 +108,73 @@ class DataDir {
 
 class XmlFile extends DataFile {
 
+  const FIELDTYPE_ENUM  = 'enum';   # enumeration
+  const FIELDTYPE_TEXT  = 'text';
+  const FIELDTYPE_HTML  = 'html';
+  const FIELDTYPE_DATE  = 'date';
+  const FIELDTYPE_INT   = 'int';
+  const FIELDTYPE_FLOAT = 'float';
+  const FIELDTYPE_LIST  = 'list';   # comma separated list
+  const FIELDTYPE_REF   = 'ref';    # reference to another object (slug)
+  const FIELDTYPE_USER  = 'user';   # user name
+
   public $root = null;
+  public $new = false;
 	
-  public function __construct($filenameOrRootElement) {
-    if (substr($filenameOrRootElement,0,1) == '<') {
-      if (substr($filenameOrRootElement,0,5) != '<?xml') {
-        $filenameOrRootElement = '<?xml version="1.0" encoding="UTF-8"?>'.$filenameOrRootElement;
+  public function __construct($filename, $rootElement='<root></root>') {
+    if ($filename && file_exists($filename)) {
+      $this->root = simplexml_load_file($filename, 'SimpleXMLExtended', LIBXML_NOCDATA);
+    } else {
+      if (!$rootElement) $rootElement = '<root></root>';
+      if (substr($rootElement,0,5) != '<?xml') {
+        $rootElement = '<?xml version="1.0" encoding="UTF-8"?>'.$rootElement;
       }
-      $this->root = @new SimpleXMLExtended($filenameOrRootElement);
-		} else {
-      $this->root = simplexml_load_file($filenameOrRootElement, 'SimpleXMLExtended', LIBXML_NOCDATA);
+      $this->root = @new SimpleXMLExtended($rootElement);
+      $this->new = true;
 		}
 	}
+  
+  public function isNew() {
+    return $this->new;
+  }
   
   /* on success returns true or the backup filename */
   public function save($filename, $backup=true) {
     $backupFilename = $backup ? self::backup($filename) : true;
     if ($this->root->asXML($filename) === TRUE) {
+      $this->new = false;
       self::setAttributes($filename);
       return $backupFilename;
     } else {
       return false;
     }
   }
+  
+  public function getString($name, $variant=null) {
+    $default = null;
+    foreach ($this->root->$name as $field) {
+      $fieldVariant = @$field['variant'];
+      if ($fieldVariant == $variant) return (string) $field;
+      if (!$fieldVariant) $default = (string) $field;
+    }
+    return $default;
+  }
+  
+  public function getTime($name, $variant=null) {
+    $value = $this->getString($name, $variant);
+    return is_numeric($value) ? (int) $value : strtotime($value);
+  }
+  
+  public static function listSlugs($path) {
+    $slugs = array();
+    $dir = opendir($path);
+    if ($dir) while (($filename = readdir($dir)) !== false) {
+      if (substr($filename,-4) == '.xml') $slugs[] = substr($filename,0,-4);
+    }
+    closedir($dir);
+    return $slugs;
+  }
+  
   
 }
 

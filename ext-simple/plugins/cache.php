@@ -10,40 +10,34 @@ register_plugin(
   '1.0',    
   'Martin Vlcek',
   'http://mvlcek.bplaced.net', 
-  'Creates a cache of all page fields except content and provides functions to access it.',
-  null,
-  null 
+  'Creates a cache of all page fields except content and provides functions to access it.'
 );
 
 # backend hooks
-addListener('save-page', 'Cache::create');
-addListener('delete-page', 'Cache::create');
+addListener('save-page', 'Cache::updatePage');
+addListener('delete-page', 'Cache::deletePage');
 
 # frontend hooks
 addListener('before-template', 'cache_before_template');
 
-class Cache extends XmlFile {
+class CacheFunctions {
   
-  private static $cache = null;
-  
-  private function __construct() {
-    parent::__construct(ES_SETTINGSPATH.'cache.xml');
-  }
-
-  public static function getField($slug, $name, $language=null) {
-    if (!self::$cache) {
-      self::$cache = new Cache();
-      if (!self::$cache) self::$cache = self::create();
+  public static function updatePage($slug) {
+    require_once(ES_PLUGINSPATH.'cache/cache.class.php');
+    $cache = new Cache(ES_SETTINGSPATH.'cache.xml');
+    if ($cache->isNew()) {
+      $cache->create(ES_PAGESPATH);
+    } else {
+      $cache->update(ES_PAGESPATH, $slug, 'type');
     }
-    return (string) self::$cache->root->xpath("/page[@name=$slug]/$name");
+    $cache->save(ES_PLUGINSPATH.'cache/cache.class.php');
   }
   
-  public static function create() {
-    
+  public static function deletePage($slug) {
+    self::updatePage($slug);
   }
   
 }
-
 
 function cache_before_template() {
   if (!function_exists('get_page_field')) {
