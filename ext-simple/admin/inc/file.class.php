@@ -1,6 +1,16 @@
 <?php
 
 class DataFile {
+
+  static public function inDataPath($filename) {
+    $dirname = dirname($filename);
+    return substr($dirname,0,strlen(ES_DATAPATH)) == ES_DATAPATH;
+  }
+  
+  static public function inBackupPath($filename) {
+    $dirname = dirname($filename);
+    return substr($dirname,0,strlen(ES_BACKUPSPATH)) == ES_BACKUPSPATH;
+  }
   
   static public function exists($filename) {
     return file_exists($filename);
@@ -8,12 +18,12 @@ class DataFile {
   
   static public function getBackupFilename($filename) {
     if (!substr($filename,0,strlen(ES_DATAPATH)) == ES_DATAPATH) return false;
-    return ES_BACKUPPATH.substr($filename,strlen(ES_DATAPATH));
+    return ES_BACKUPSPATH.substr($filename,strlen(ES_DATAPATH));
   }
   
   static public function getFilename($backupFilename) {
-    if (!substr($backupFilename,0,strlen(ES_BACKUPPATH)) == ES_BACKUPPATH) return false;
-    return ES_DATAPATH.substr($backupFilename,strlen(ES_BACKUPPATH));
+    if (!substr($backupFilename,0,strlen(ES_BACKUPSPATH)) == ES_BACKUPSPATH) return false;
+    return ES_DATAPATH.substr($backupFilename,strlen(ES_BACKUPSPATH));
   }
   
   /* on success returns the backup filename */
@@ -25,6 +35,7 @@ class DataFile {
   
   /* on success returns true or the backup filename */
   static public function delete($filename, $backup=true) {
+    if (!self::inDataPath($filename)) return false;
     if ($backup && !($backupFilename = self::backup($filename))) return false;
     if (unlink($filename)) return $backup ? $backupFilename : true;
     return false;
@@ -118,6 +129,8 @@ class XmlFile extends DataFile {
   const FIELDTYPE_REF   = 'ref';    # reference to another object (slug)
   const FIELDTYPE_USER  = 'user';   # user name
 
+  private static $fieldTypes = array();
+
   public $root = null;
   public $new = false;
 	
@@ -140,6 +153,7 @@ class XmlFile extends DataFile {
   
   /* on success returns true or the backup filename */
   public function save($filename, $backup=true) {
+    if (!self::inDataPath($filename)) return false;
     $backupFilename = $backup ? self::backup($filename) : true;
     if ($this->root->asXML($filename) === TRUE) {
       $this->new = false;
@@ -175,6 +189,30 @@ class XmlFile extends DataFile {
     return $slugs;
   }
   
+  public static function getFieldTypes($objClass, $objType) {
+    $fullType = $objClass . ($objType ? '-'.$objType : '');
+    if (!isset(self::$fieldTypes[$fullType])) {
+      self::$fieldTypes[$fullType] = execForInfo('get-fieldtypes-'.$objClass, $objType);
+    }
+    return self::$fieldTypes[$fullType];
+  }
+  
+  public static function getFieldType($objClass, $objType, $name) {
+    $fullType = $objClass . ($objType ? '-'.$objType : '');
+    $types = self::getFieldTypes($fullType);
+    return @$types[$name];
+  }
+  
+  /**
+   * The object class is the part of the path after ES_DATAPATH, e.g. 'pages'
+   */
+  public static function getObjectClassFromPath($path) {
+    if (substr($path,-1) == '/') $path = substr($path,0,-1);
+    if (substr($path,0,strlen(ES_DATAPATH)) == ES_DATAPATH) {
+      return substr($path, strlen(ES_DATAPATH)+1);
+    }
+    return $path;
+  }
   
 }
 

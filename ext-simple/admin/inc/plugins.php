@@ -28,7 +28,9 @@ class Plugins {
     self::setEnabledPlugins($plugins);
   }
 
-  public static function registerPlugin($id, $name, $version=null, $author=null, $website=null, $description=null, $tab=null, $callback=null) {
+  public static function registerPlugin($id, $name, $version=null, 
+      $author=null, $website=null, $description=null, 
+      $tab=null, $callback=null, $requires=null) {
     self::$plugins[$id] = array(
       'name' => $name,
       'version' => $version,
@@ -36,7 +38,8 @@ class Plugins {
       'website' => $website,
       'description' => $description,
       'tab' => $tab,
-      'callback' => $callback
+      'callback' => $callback,
+      'requires' => $requires
     );
     self::$currentPlugin = $id;
   }
@@ -135,8 +138,8 @@ foreach ($enabledPlugins as $name) {
 unset($enabledPlugins);
 unset($name);
 
-function registerPlugin($id, $name, $version=null, $author=null, $website=null, $description=null, $tab=null, $callback=null) {
-  Plugins::registerPlugin($id, $name, $version, $author, $website, $description, $tab, $callback);
+function registerPlugin($id, $name, $version=null, $author=null, $website=null, $description=null, $tab=null, $callback=null, $requires=null) {
+  Plugins::registerPlugin($id, $name, $version, $author, $website, $description, $tab, $callback, $requires);
 }
 
 function getPlugin($id) {

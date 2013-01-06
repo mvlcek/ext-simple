@@ -91,7 +91,8 @@ class Page extends XmlFile {
     return self::listSlugs(ES_PAGES_PATH);
   }
   
-  public static function getFieldTypes($type) {
+  public static function getFieldTypes($objType) {
+    // those field types are independent of the type of page ($objType)
     return array(
       'type' => self::FIELDTYPE_ENUM,
       'visibility' => self::FIELDTYPE_ENUM,
@@ -112,7 +113,7 @@ class Page extends XmlFile {
       'publishUntil' => self::FIELDTYPE_DATE
     );
   }
-  
-  
 
 }
+
+addListener('get-fieldtypes-pages', 'Page::getFieldTypes');
