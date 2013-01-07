@@ -131,7 +131,7 @@ class Common {
   }
   
   function getVariant() {
-    // TODO
+    return Init::getVariant();
   }
   
 }
