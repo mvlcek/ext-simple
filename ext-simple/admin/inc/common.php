@@ -1,4 +1,11 @@
 <?php
+# +--------------------------------------------------------------------+
+# | ExtSimple                                                          |
+# | The simple extensible XML based CMS                                |
+# +--------------------------------------------------------------------+
+# | Copyright (c) 2013 Martin Vlcek                                    |
+# | License: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)          |
+# +--------------------------------------------------------------------+
 
 define('ES_VERSION', '1.0');
 define('IN_ES', true);
@@ -17,6 +24,7 @@ require_once(ES_ADMINPATH.'inc/file.class.php');
 class Init {
   
   private static $isFrontend = null;
+  private static $variant = null;
   
   static public function definePaths() {
     $pos = strrpos(dirname(__FILE__),DIRECTORY_SEPARATOR.'inc');
@@ -52,27 +60,39 @@ class Init {
     return self::$isFrontend;
   }
 
-  static public function setLanguage() {
-    
+  static public function setVariant($variant) {
+    self::$variant = $variant;
   }
   
-  static public function setTimezone() {
-    
+  static public function getVariant() {
+    return self::$variant;
+  }
+  
+  static public function setTimezone($timezone) {
+    date_default_timezone_set($timezone);
+  }
+  
+  static public function setLocale($locale) {
+    if (is_array($locale)) {
+      setlocale(LC_ALL, $locale);
+    } else {
+      setlocale(LC_ALL, preg_split('/\s*,\s*/', $locale));
+    }
   }
   
 }
 
 
-class I18nHelper {
+class Common {
 
   static private $i18n = array();
   
-  function load($lang=null) {
+  function loadLanguage($lang=null) {
     global $LANG;
     if (!$lang) $lang = $LANG;
   }
   
-  function loadPlugin($plugin, $lang=null) {
+  function loadPluginLanguage($plugin, $lang=null) {
     global $LANG;
     if (!$lang) $lang = $LANG;
     if (!file_exists(ES_PLUGINSPATH.$plugin.'/lang/'.$lang.'.php')) {
@@ -88,7 +108,7 @@ class I18nHelper {
     return true;
   }
 
-  static public function get($name, $args=null) {
+  static public function getString($name, $args=null) {
     if (array_key_exists($name, self::$i18n)) {
       $msg = self::$i18n[$name];
       if (is_array($args)) $msg = vsprintf($msg, $args);
@@ -97,23 +117,25 @@ class I18nHelper {
       return '{'.$name.'}';
     }
   }
-
+  
+  function isDebug() {
+    return defined('ES_DEBUG') && ES_DEBUG;
+  }
+  
+  function isFrontend() {
+    return Init::isFrontend();
+  }
+  
+  function isBackend() {
+    return !self::isFrontend();
+  }
+  
+  function getVariant() {
+    // TODO
+  }
+  
 }
 
-
-/**
- * output the localized formatted string 
- * 
- * @since 1.0
- * @author mvlcek
- * @param string $name
- * @param varargs $args
- */
-function put_i18n($name, $args) {
-  $args = func_get_args();
-  array_shift($args);
-  echo I18nHelper::get($name, $args);
-}
 
 /**
  * return the localized formatted string
@@ -123,54 +145,58 @@ function put_i18n($name, $args) {
  * @param string $name
  * @param varargs $args
  */
-function get_i18n($name, $args) {
+function get_s($name, $args) {
   $args = func_get_args();
   array_shift($args);
-  return I18nHelper::get($name, $args);
+  return I18nHelper::getString($name, $args);
 }
 
 /**
- * Merges a plugin's language file with the global language map
- * This is the function that plugin developers will call to initiate 
- * the language merge.
- *
- * @since 1.0
- * @author mvlcek
- * @param string $plugin
- * @param string $language, default=null
- * @return bool
- */
-function loadStrings($plugin, $language=null) {
-  return I18nHelper::loadPlugin($plugin, $language);
-}
-
-/**
- * Add a trailing slash to a path, if necessasry
+ * output the localized formatted string 
  * 
  * @since 1.0
  * @author mvlcek
- * @param string $path
+ * @param string $name
+ * @param varargs $args
  */
-function tsl($path) {
-  return substr($path,-1) == '/' ? $path : $path.'/'; 
+function put_s($name, $args) {
+  $args = func_get_args();
+  array_shift($args);
+  echo I18nHelper::getString($name, $args);
 }
 
-function isDebug() {
-  return defined('ES_DEBUG') && ES_DEBUG;
+
+function put_date($date, $format=null, $default=null) {
+  $time = is_numeric($date) ? (int) $date : strtotime($date);
+  if ($time) {
+    if ($format) {
+      $fmt = get_s('DATE_FORMAT_'.$format);
+      if (!$fmt) $fmt = $format;
+    } else {
+      $fmt = get_s('DATE_FORMAT');
+      if (!$fmt) $fmt = '%Y-%m-%d %H:%M';
+    }
+    echo htmlspecialchars(strftime($fmt, $time)); 
+    return true;
+  } else {
+    if ($default != null) echo $default;
+    return false;
+  }
 }
 
-function isFrontend() {
-  return Init::isFrontend();
-}
-
-function isBackend() {
-  return !isFrontend();
-}
-
-function getLanguage() {
-  // TODO
-}
-
-function getDefaultLanguage() {
-  // TODO
+function put_number($number, $format, $default) {
+  if ($number != null) {
+    if ($format) {
+      $fmt = get_s('NUMBER_FORMAT_'.$format);
+      if (!$fmt) $fmt = $format;
+    } else {
+      $fmt = get_s('NUMBER_FORMAT');
+      if (!$fmt) $fmt = '%.2f';
+    }
+    echo htmlspecialchars(sprintf($fmt, $number));
+    return true;
+  } else {
+    if ($default != null) echo $default;
+    return false;
+  }
 }

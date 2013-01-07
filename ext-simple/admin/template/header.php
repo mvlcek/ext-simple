@@ -3,6 +3,7 @@ if (!defined('IN_ES')) { die('You cannot load this page directly.'); }
 
 require_once(ES_ADMINPATH.'inc/template.php');
 
+$tab = $tab;
 $what = basename($_SERVER['PHP_SELF'], '.php');
 if ($what != 'index') exec_action('before-admin-template');
 ?>
@@ -19,9 +20,18 @@ if ($what != 'index') exec_action('before-admin-template');
   <link rel="stylesheet" type="text/css" href="template/css/default.css" media="screen" />
   <script type="text/javascript" src="template/js/jquery.js"></script>   
   <script type="text/javascript" src="template/js/jquery-ui.js"></script>
-  <?php exec_action('end-admin-header'); ?>   
+  <?php exec_action('after-admin-header'); ?>   
 </head>
 <body class="<?php echo $what; ?>" > 
   <div class="header" id="header" >
-    <div class="navigation">
- <?php exec_action('header-body'); ?>
+    <div class="title">Ext-Simple</div>
+    <div class="welcome" id="welcome">
+      <ul class="welcome">
+        <li>
+      </ul>
+    </div>
+  </div>
+  <div class="main-menu" id="main-menu">
+    <ul class="main-menu">
+    </ul>
+  </div>

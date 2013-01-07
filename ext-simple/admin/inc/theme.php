@@ -1,4 +1,11 @@
 <?php
+# +--------------------------------------------------------------------+
+# | ExtSimple                                                          |
+# | The simple extensible XML based CMS                                |
+# +--------------------------------------------------------------------+
+# | Copyright (c) 2013 Martin Vlcek                                    |
+# | License: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)          |
+# +--------------------------------------------------------------------+
 
 function put_header($type=null, $options=null) {
   execAction('before-header');
@@ -58,21 +65,7 @@ function put_field($name, $html=false, $default=null) {
 }
 
 function put_date_field($name, $format=null, $default=null) {
-  if ($format) {
-    $fmt = getString('DATE_FORMAT_'.$format);
-    if (!$fmt) $fmt = $format;
-  } else {
-    $fmt = getString('DATE_FORMAT');
-    if (!$fmt) $fmt = '%Y-%m-%d %H:%M:%S';
-  }
-  $date = get_field_as_timestamp($name);
-  if ($date) {
-    echo strftime($format, $date);
-    return true;
-  } else {
-    if ($default !== null) echo $default;
-    return false;
-  }
+  return put_date(get_field($name), $format, $default);
 }
 
 function put_page_field($slug, $name, $html=false) {
@@ -83,17 +76,8 @@ function put_page_field($slug, $name, $html=false) {
   return $value !== null && $value !== '';
 }
 
-function put_page_date_field($slug, $name, $format) {
-  if ($format) {
-    $fmt = getString('DATE_FORMAT_'.$format);
-    if (!$fmt) $fmt = $format;
-  } else {
-    $fmt = getString('DATE_FORMAT');
-    if (!$fmt) $fmt = '%Y-%m-%d %H:%M:%S';
-  }
-  $date = get_page_field_as_timestamp($slug, $name);
-  if ($date) echo strftime($format, $date);
-  return (bool) $date;
+function put_page_date_field($slug, $name, $format, $default=null) {
+  put_date(get_page_field($slug, $name), $format, $default);
 }
 
 function put_component($name) {
