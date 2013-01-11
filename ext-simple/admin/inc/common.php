@@ -20,24 +20,34 @@ if (get_magic_quotes_gpc()) {
 Init::definePaths();
 require_once(ES_ROOTPATH.'esconfig.php');
 require_once(ES_ADMINPATH.'inc/file.class.php');
+require_once(ES_ADMINPATH.'inc/settings.class.php');
 
 class Init {
   
   private static $isFrontend = null;
+  private static $language = null;
   private static $variant = null;
+  private static $user = false;
   
   static public function definePaths() {
     $pos = strrpos(dirname(__FILE__),DIRECTORY_SEPARATOR.'inc');
     $adm = substr(dirname(__FILE__), 0, $pos);
-    define('ES_ADMINPATH', tsl($adm));
+    define('ES_ADMINPATH', $adm.'/');
+    $pos = strrpos($adm,DIRECTORY_SEPARATOR);
+    if (!defined('ES_ADMIN')) {
+      define('ES_ADMIN', substr($adm,$pos+1));
+    } else if (ES_ADMIN != substr($adm,$pos+1)) {
+      Log::warning("ES_ADMIN is incorrectly defined: it is '%s', but should be '%s'!", ES_ADMIN, substr($adm,$pos+1));
+    }
     $pos = strrpos($adm, DIRECTORY_SEPARATOR);
-    define('ES_ROOTPATH', tsl(__FILE__, 0 , $pos));
+    define('ES_ROOTPATH', substr(__FILE__,0,$pos).'/');
     define('ES_DATAPATH', ES_ROOTPATH.'data/');
-    define('ES_SETTINGSPATH', ES_DATAPATH.'other/');
+    define('ES_SETTINGSPATH', ES_DATAPATH.'settings/');
     define('ES_USERSPATH', ES_DATAPATH.'users/');
     define('ES_PAGESPATH', ES_DATAPATH.'pages/');
     define('ES_UPLOADSPATH', ES_DATAPATH.'uploads/');
     define('ES_THUMBNAILSPATH', ES_DATAPATH.'thumbs/');
+    define('ES_LOGSPATH', ES_DATAPATH.'logs/');
     define('ES_BACKUPSPATH', ES_ROOTPATH.'backups/');
     define('ES_THEMESPATH', ES_ROOTPATH.'theme/');
     define('ES_PLUGINSPATH', ES_ROOTPATH.'plugins/');
@@ -58,6 +68,47 @@ class Init {
       self::$isFrontend = ($_SERVER['SCRIPT_NAME'] == ES_ROOTPATH.'index.php');
     }
     return self::$isFrontend;
+  }
+  
+  static public function getUser() {
+    if (self::$user === false) {
+      // determine user
+      self::$user = null;
+      $username = $_COOKIE['ES_USER'];
+      if ($username) {
+        $cookiename = sha1($username.Settings::getSalt());
+        if (isset($_COOKIE[$cookiename])) {
+          $cookieval = sha1($_SERVER['REMOTE_ADDR'].$username.Settings::getSalt());
+          if ($_COOKIE[$cookiename] == $cookieval) {
+            require_once(ES_ADMINPATH.'inc/user.class.php');
+            self::$user = new User($username);
+          }
+        }
+      }
+    }
+    return self::$user;
+  }
+  
+  static public function isLoggedIn() {
+    return getUser() != null;
+  }
+  
+  static public function setLanguage($language) {
+    self::$language = $language;
+  }
+  
+  static public function getLanguage($language) {
+    if (!self::$language) {
+      if (self::isFrontend()) {
+        if (($lang = Settings::getWebsiteLanguage())) self::$language = $lang;
+      } else {
+        $user = self::getUser();
+        if (($lang = $user->getLanguage())) self::$language = $lang;
+      }
+      if (!self::$language && defined(ES_LANGUAGE) && ES_LANGUAGE) {
+        self::$language = ES_LANGUAGE;
+      }
+    }
   }
 
   static public function setVariant($variant) {
@@ -132,6 +183,14 @@ class Common {
   
   function getVariant() {
     return Init::getVariant();
+  }
+  
+  function getUser() {
+    return Init::getUser();
+  }
+  
+  function getLanguage() {
+    return Init::getLanguage();
   }
   
 }

@@ -7,6 +7,9 @@
 # | License: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)          |
 # +--------------------------------------------------------------------+
 
+require_once(ES_ADMINPATH.'inc/log.class.php');
+require_once(ES_ADMINPATH.'inc/plugins.php');
+
 class DataFile {
 
   static public function inDataPath($filename) {
@@ -17,6 +20,13 @@ class DataFile {
   static public function inBackupPath($filename) {
     $dirname = dirname($filename);
     return substr($dirname,0,strlen(ES_BACKUPSPATH)) == ES_BACKUPSPATH;
+  }
+
+  static public function checkName($filename) {
+    if (strpos($filename,'..') !== false) {
+      Log::error('Invalid filename %s!', $filename);
+      die("Invalid filename $filename!");
+    }
   }
   
   static public function exists($filename) {
@@ -35,6 +45,7 @@ class DataFile {
   
   /* on success returns the backup filename */
   static public function backup($filename) {
+    self::checkName($filename);
     if (!($backupFilename = self::getBackupFilename($filename))) return false;
     if (copy($filename, $backupFilename)) return $backupFilename;
     return false;
@@ -42,6 +53,7 @@ class DataFile {
   
   /* on success returns true or the backup filename */
   static public function delete($filename, $backup=true) {
+    self::checkName($filename);
     if (!self::inDataPath($filename)) return false;
     if ($backup && !($backupFilename = self::backup($filename))) return false;
     if (unlink($filename)) return $backup ? $backupFilename : true;
@@ -50,6 +62,7 @@ class DataFile {
   
   /* on success returns true or the backup filename */
   static public function restore($backupFilename) {
+    self::checkName($backupFilename);
     if (!($filename = self::getFilename($backupFilename))) return false;
     if (!file_exists($backupFilename)) return false;
     if (!file_exists($filename)) {
@@ -77,6 +90,7 @@ class DataFile {
   }
   
   static public function setAttributes($filename) {
+    self::checkName($filename);
     if (defined('ES_FILE_MOD')) chmod($filename, ES_FILE_MOD);
     if (defined('ES_FILE_OWNER')) chown($filename, ES_FILE_OWNER);
   }
@@ -91,7 +105,15 @@ class DataDir {
     if (defined('ES_DIR_OWNER')) chown($dirname, ES_DIR_OWNER);
   }
   
+  static public function checkName($dirname) {
+    if (strpos($dirname,'..') !== false) {
+      Log::error('Invalid directory name %s!', $dirname);
+      die("Invalid directory name $dirname!");
+    }
+  }
+  
   static public function create($dirname) {
+    self::checkName($dirname);
     $parent = dirname($dirname);
     if ($parent != '.' && !file_exists($parent)) {
       if (!self::create($parent)) return false;
@@ -105,6 +127,7 @@ class DataDir {
   }
   
   static public function delete($dirname, $recursive=false) {
+    self::checkName($dirname);
     if (file_exists($dirname) && is_dir($dirname)) {
       if ($recursive) {
         $dir = opendir($dirname);

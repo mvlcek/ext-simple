@@ -7,6 +7,9 @@
 # | License: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)          |
 # +--------------------------------------------------------------------+
 
+require_once(ES_ADMINPATH.'inc/page.class.php');
+require_once(ES_ADMINPATH.'inc/plugins.php');
+
 function put_header($type=null, $options=null) {
   execAction('before-header');
   $done = execWhile('put-header', array($type, $options), false);

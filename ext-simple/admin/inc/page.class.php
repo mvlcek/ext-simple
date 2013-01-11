@@ -7,6 +7,9 @@
 # | License: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)          |
 # +--------------------------------------------------------------------+
 
+require_once(ES_ADMINPATH.'inc/file.class.php');
+require_once(ES_ADMINPATH.'inc/plugins.php');
+
 /**
  * A page contains the following standard fields:
  * 

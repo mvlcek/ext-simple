@@ -10,7 +10,10 @@
 class Log {
 
   static private function entry($level, $message, $params) {
-    
+    $fh = fopen(ES_LOGSPATH.'extsimple.log', 'a');
+    $line = $level.' '.date('Y-m-d H:i:s.u').' '.sprintf($message, $params);
+    fwrite($fh, $line."\r\n");
+    fclose($fh);
   }
   
   static public function debug($message, $params) {
