@@ -29,7 +29,7 @@ class Init {
   private static $variant = null;
   private static $user = false;
   
-  static public function definePaths() {
+  public static function definePaths() {
     $pos = strrpos(dirname(__FILE__),DIRECTORY_SEPARATOR.'inc');
     $adm = substr(dirname(__FILE__), 0, $pos);
     define('ES_ADMINPATH', $adm.'/');
@@ -53,7 +53,7 @@ class Init {
     define('ES_PLUGINSPATH', ES_ROOTPATH.'plugins/');
   }
 
-  static public function stripSlashesFromParam($value) {
+  public static function stripSlashesFromParam($value) {
     if (is_array($value)) {
       $result = array();
       foreach ($value as $v) $result[] = stripslashes($v);
@@ -63,14 +63,14 @@ class Init {
     }
   }
   
-  static public function isFrontend() {
+  public static function isFrontend() {
     if (self::$isFrontend === null) {
       self::$isFrontend = ($_SERVER['SCRIPT_NAME'] == ES_ROOTPATH.'index.php');
     }
     return self::$isFrontend;
   }
   
-  static public function getUser() {
+  public static function getUser() {
     if (self::$user === false) {
       // determine user
       self::$user = null;
@@ -89,15 +89,15 @@ class Init {
     return self::$user;
   }
   
-  static public function isLoggedIn() {
+  public static function isLoggedIn() {
     return getUser() != null;
   }
   
-  static public function setLanguage($language) {
+  public static function setLanguage($language) {
     self::$language = $language;
   }
   
-  static public function getLanguage($language) {
+  public static function getLanguage() {
     if (!self::$language) {
       if (self::isFrontend()) {
         if (($lang = Settings::getWebsiteLanguage())) self::$language = $lang;
@@ -111,19 +111,19 @@ class Init {
     }
   }
 
-  static public function setVariant($variant) {
+  public static function setVariant($variant) {
     self::$variant = $variant;
   }
   
-  static public function getVariant() {
+  public static function getVariant() {
     return self::$variant;
   }
   
-  static public function setTimezone($timezone) {
+  public static function setTimezone($timezone) {
     date_default_timezone_set($timezone);
   }
   
-  static public function setLocale($locale) {
+  public static function setLocale($locale) {
     if (is_array($locale)) {
       setlocale(LC_ALL, $locale);
     } else {
@@ -136,14 +136,61 @@ class Init {
 
 class Common {
 
-  static private $i18n = array();
+  private static $i18n = array();
+  private static $i18n_loaded = array();
   
-  function loadLanguage($lang=null) {
-    global $LANG;
-    if (!$lang) $lang = $LANG;
+  private static $styles = array();
+  private static $scripts = array();
+  
+  public static function loadLanguage($plugin=null, $defaultLanguage=null) {
+    if (@self::$i18n_loaded[$plugin]) return;
+    $path = $plugin ? ES_PLUGINSPATH.$plugin.'/lang/' : ES_ADMINPATH.'/lang';
+    $lang = Init::getLanguage();
+    if (!self::loadLanguageFile($plugin, $path.$lang) && strlen($lang) > 2) {
+      self::loadLanguageFile($plugin, $path.substr($lang,0,2));
+    }
+    if ($defaultLanguage != null) {
+      self::loadLanguageFile($plugin, $path.$defaultLanguage);
+    }
+    self::$i18n_loaded[$plugin] = true;
   }
   
-  function loadPluginLanguage($plugin, $lang=null) {
+  private static function loadLanguageFile($plugin, $fileWithoutExt) {
+    $prefix = $plugin ? $plugin.'/' : '';
+    if (file_exists($fileWithoutExt.'.properties')) {
+      $subst = array("\\n"=>"\n", "\\\\"=>"\\", "\\\""=>"\"", "\\'"=>"'", 
+                     "\\r"=>"\r", "\\t"=>"\t");
+      $fh = fopen($fileWithoutExt.'.properties', 'r');
+      while (($line = fgets($fh)) !== false) {
+        if (substr($line,0,1) != '#') {
+          $pos = strpos($line,'=');
+          if ($pos > 0) {
+            $code = trim(substr($line,0,$pos));
+            $text = ltrim(substr($line,$pos+1));
+            while (substr($text,-1) == '\\' && ($line = fgets($fh)) !== false) {
+              $text = substr($text,0,-1);
+              $text += "\n".ltrim($line);
+            }
+            if (!array_key_exists($prefix.$code, self::$i18n)) {
+              foreach ($subst as $from => $to) $text = str_replace($text, $from, $to);
+              self::$i18n[$prefix.$code] = $text;
+            }
+          }
+        }
+      }
+    } else if (file_exists($fileWithoutExt.'.php')) {
+      $i18n = array();
+      @include($fileWithoutExt.'.php'); 
+      if (count($i18n) > 0) foreach ($i18n as $code => $text) {
+        if (!array_key_exists($prefix.$code, self::$i18n)) {
+          self::$i18n[$prefix.$code] = $text;
+        }
+      }
+      return true;
+    }
+  }
+  
+  public static function loadPluginLanguage($plugin, $lang=null) {
     global $LANG;
     if (!$lang) $lang = $LANG;
     if (!file_exists(ES_PLUGINSPATH.$plugin.'/lang/'.$lang.'.php')) {
@@ -159,7 +206,7 @@ class Common {
     return true;
   }
 
-  static public function getString($name, $args=null) {
+  public static function getString($name, $args=null) {
     if (array_key_exists($name, self::$i18n)) {
       $msg = self::$i18n[$name];
       if (is_array($args)) $msg = vsprintf($msg, $args);
@@ -169,28 +216,54 @@ class Common {
     }
   }
   
-  function isDebug() {
+  public static function isDebug() {
     return defined('ES_DEBUG') && ES_DEBUG;
   }
   
-  function isFrontend() {
+  public static function isFrontend() {
     return Init::isFrontend();
   }
   
-  function isBackend() {
+  public static function isBackend() {
     return !self::isFrontend();
   }
   
-  function getVariant() {
+  public static function getVariant() {
     return Init::getVariant();
   }
   
-  function getUser() {
+  public static function getUser() {
     return Init::getUser();
   }
   
-  function getLanguage() {
+  public static function getLanguage() {
     return Init::getLanguage();
+  }
+  
+  public static function addStyle($name, $src, $version=null, $media=null) {
+    if (!isset(self::$styles[strtolower($name)]) || 
+        version_compare(self::$styles[strtolower($name)]['version'], $version) < 0) {
+      self::$styles[strtolower($name)] = array('src'=>$src, 'version'=>$version, 'media'=>$media);
+    }
+  }
+  
+  public static function addScript($name, $src, $version=null) {
+    if (!isset(self::$scripts[strtolower($name)]) || 
+        version_compare(self::$scripts[strtolower($name)]['version'], $version) < 0) {
+      self::$scripts[strtolower($name)] = array('src'=>$src, 'version'=>$version);
+    }
+  }
+  
+  public static function putStyles() {
+    foreach (self::$styles as $style) {
+      echo '<link href="'.htmlspecialchars($style['src']).'" rel="stylesheet"'.($style['media'] ? ' media="'.htmlspecialchars($style['media']).'"' : '').'>';
+    }
+  }
+  
+  public static function putScripts() {
+    foreach (self::$scripts as $script) {
+      echo '<script src="'.htmlspecialchars($script['src']).'"></script>';
+    }
   }
   
 }
@@ -258,4 +331,12 @@ function put_number($number, $format, $default) {
     if ($default != null) echo $default;
     return false;
   }
+}
+
+function put_css() {
+  Common::putStyles();
+}
+
+function put_js() {
+  Common::putScripts();
 }
