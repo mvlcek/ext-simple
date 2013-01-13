@@ -139,6 +139,7 @@ class Common {
   private static $i18n = array();
   private static $i18n_loaded = array();
   
+  private static $page = null;
   private static $styles = array();
   private static $scripts = array();
   
@@ -240,6 +241,19 @@ class Common {
     return Init::getLanguage();
   }
   
+  public static function getPage() {
+    if (!self::$page) {
+      if (!self::isFrontend()) return null;
+      $slug = $_REQUEST['id'];
+      if (Page::existsPage($slug)) {
+        self::$page = new Page($slug);
+      } else if (Page::existsPage('404')) {
+        self::$page = new Page('404');
+      }
+    }
+    return self::$page;
+  }
+  
   public static function addStyle($name, $src, $version=null, $media=null) {
     if (!isset(self::$styles[strtolower($name)]) || 
         version_compare(self::$styles[strtolower($name)]['version'], $version) < 0) {
@@ -333,10 +347,39 @@ function put_number($number, $format, $default) {
   }
 }
 
+function add_frontend_js($name, $src, $version=null) {
+  if (Common::isFrontend()) Common::addScript($name, $src, $version);  
+}
+
+function add_frontend_css($name, $src, $version=null, $media=null) {
+  if (Common::isFrontend()) Common::addStyle($name, $src, $version, $media);
+}
+
+function add_backend_js($name, $src, $version=null) {
+  if (Common::isBackend()) Common::addScript($name, $src, $version);  
+}
+
+function add_backend_css($name, $src, $version=null, $media=null) {
+  if (Common::isBackend()) Common::addStyle($name, $src, $version, $media);
+}
+
 function put_css() {
   Common::putStyles();
 }
 
 function put_js() {
   Common::putScripts();
+}
+
+function get_page_link($slug) {
+  $link = Settings::getPrettyURL();
+  if (!$link) {
+    $link = Settings::getWebsiteURL();
+    if (!substr($link,-1) == '/') $link .= '/';
+    $link .= 'index.php?id='.urlencode($slug);
+    $link = execFilter('filter-link', array($link));
+    return $link;
+  } else {
+    
+  }
 }

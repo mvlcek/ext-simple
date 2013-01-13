@@ -9,17 +9,46 @@
 
 require_once(ES_ADMINPATH.'inc/page.class.php');
 require_once(ES_ADMINPATH.'inc/plugins.php');
+require_once(ES_ADMINPATH.'inc/navigation.class.php');
 
 function put_header($type=null, $options=null) {
   execAction('before-header');
   $done = execWhile('put-header', array($type, $options), false);
   if (!$done) {
-    // TODO
+    $page = Common::getPage();
+    if ($page) {
+      $description = $page->getField('description', Common::getVariant(), null);
+      if (!$description) {
+        $description = strip_tags($page->getField('content', Common::getVariant(), null));
+        if (function_exists('mb_substr')) {
+          $description = trim(mb_substr($description, 0, 160));
+        } else {
+          $description = trim(substr($description, 0, 160));
+        }
+      }
+      if ($description) {
+        $description = preg_replace('/\r\n|\r|\n|\t/', " ", $description);
+        echo '<meta name="description" content="'.htmlspecialchars($description).'" />'."\n";
+      }
+      $keywords = array();
+      $tags = preg_split('/\s*,\s*/', $page->getField('tags'));
+      foreach ($tags as $tag) {
+        if (!substr(trim($tag),0,1) == '_') $keywords[] = $tag;
+      }
+      if ($keywords) {
+        echo '<meta name="keywords" content="'.htmlspecialchars(join(', ', $keywords)).'" />'."\n";
+      }
+      // TODO: canonical URL
+      //echo '<link rel="canonical" href="'. get_page_url(true) .'" />'."\n";
+    }    
+    echo '<meta name="generator" content="ExtSimple" />'."\n";
+    put_css();
+    put_js();
   }
   execAction('after-header');
 }
 
-function put_navigation($slug=null, $minlevel=0, $maxlevel=99, $type=null, $options=null) {
+function put_navigation($slug=null, $minlevel=0, $maxlevel=0, $type=null, $options=null) {
   if (!$slug) $slug = get_slug();
   execAction('before-navigation');
   $args = array($slug, $minlevel, $maxlevel, $type, $options);
@@ -89,13 +118,13 @@ function put_component($name) {
 
 
 function get_slug() {
-  $page = getPage();
+  $page = Common::getPage();
   return $page ? $page->getSlug() : null;
 }
 
 function get_field($name) {
-  $page = getPage();
-  return $page ? $page->getField($name, getLanguage()) : null;
+  $page = Common::getPage();
+  return $page ? $page->getField($name, Common::getVariant()) : null;
 }
 
 function get_field_as_timestamp($name) {
@@ -106,7 +135,7 @@ function get_field_as_timestamp($name) {
 if (!function_exists('get_page_field')) {
   function get_page_field($slug, $name) {
     $page = new Page($slug, true);
-    return $page ? $page->getField($name, getLanguage()) : null;
+    return $page ? $page->getField($name, Common::getVariant()) : null;
   }
 }
 
@@ -118,3 +147,4 @@ function get_page_field_as_timestamp($slug, $name) {
 function get_component($name) {
   
 }
+

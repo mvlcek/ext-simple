@@ -70,4 +70,8 @@ class Settings extends XmlFile {
     return self::get('salt', 'Salt');
   }
   
+  public static function getPrettyURL() {
+    return self::get('pretty-url', null);
+  }
+  
 }

@@ -86,6 +86,10 @@ class Page extends XmlFile {
     return $this->save(ES_PAGESPATH.$this->slug.'.xml', true);
   }
   
+  public static function existsPage($slug) {
+    return file_exists(ES_PAGESPATH.$slug.'.xml');
+  }
+  
   public static function deletePage($slug) {
     return self::delete(ES_PAGESPATH.$slug.'.xml', true);
   }
