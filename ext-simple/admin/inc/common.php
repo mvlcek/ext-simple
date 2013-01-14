@@ -270,13 +270,13 @@ class Common {
   
   public static function putStyles() {
     foreach (self::$styles as $style) {
-      echo '<link href="'.htmlspecialchars($style['src']).'" rel="stylesheet"'.($style['media'] ? ' media="'.htmlspecialchars($style['media']).'"' : '').'>';
+      echo '<link href="'.htmlspecialchars($style['src']).'" rel="stylesheet"'.($style['media'] ? ' media="'.htmlspecialchars($style['media']).'"' : '').'>'."\n";
     }
   }
   
   public static function putScripts() {
     foreach (self::$scripts as $script) {
-      echo '<script src="'.htmlspecialchars($script['src']).'"></script>';
+      echo '<script src="'.htmlspecialchars($script['src']).'"></script>'."\n";
     }
   }
   
@@ -322,7 +322,12 @@ function put_date($date, $format=null, $default=null) {
       $fmt = get_s('DATE_FORMAT');
       if (!$fmt) $fmt = '%Y-%m-%d %H:%M';
     }
-    echo htmlspecialchars(strftime($fmt, $time)); 
+    if (strtoupper(substr(PHP_OS, 0, 3)) == 'WIN') {
+      // workaround for Windows, as strftime returns ISO-8859-1 encoded string
+      echo htmlspecialchars(utf8_encode(strftime($fmt, $time))); 
+    } else {
+      echo htmlspecialchars(strftime($fmt, $time)); 
+    }
     return true;
   } else {
     if ($default != null) echo $default;
