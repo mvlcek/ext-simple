@@ -26,7 +26,7 @@ class Init {
   
   private static $isFrontend = null;
   private static $language = null;
-  private static $variant = null;
+  private static $variants = null;
   private static $user = false;
   
   public static function definePaths() {
@@ -42,6 +42,7 @@ class Init {
     $pos = strrpos($adm, DIRECTORY_SEPARATOR);
     define('ES_ROOTPATH', substr(__FILE__,0,$pos).'/');
     define('ES_DATAPATH', ES_ROOTPATH.'data/');
+    define('ES_CACHEPATH', ES_DATAPATH.'cache');
     define('ES_SETTINGSPATH', ES_DATAPATH.'settings/');
     define('ES_USERSPATH', ES_DATAPATH.'users/');
     define('ES_PAGESPATH', ES_DATAPATH.'pages/');
@@ -111,12 +112,16 @@ class Init {
     }
   }
 
-  public static function setVariant($variant) {
-    self::$variant = $variant;
+  public static function setVariants($variants) {
+    self::$variants = is_array($variants) ? $variants : func_get_args();
+  }
+  
+  public static function getVariants() {
+    return self::$variants;
   }
   
   public static function getVariant() {
-    return self::$variant;
+    return self::$variants && count(self::$variants) > 0 ? self::$variants[0] : null;
   }
   
   public static function setTimezone($timezone) {
@@ -227,6 +232,10 @@ class Common {
   
   public static function isBackend() {
     return !self::isFrontend();
+  }
+  
+  public static function getVariants() {
+    return Init::getVariants();
   }
   
   public static function getVariant() {

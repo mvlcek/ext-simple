@@ -37,7 +37,7 @@ require_once(ES_ADMINPATH.'inc/plugins.php');
  *   - publishUntil: time after which the page is not shown anymore (empty = show indefinitely)
  */
  
-class Page extends XmlFile {
+class Page extends XmlSlugFile {
   
   const TYPE_NORMAL = 'normal';
   const TYPE_LINK = 'link';
@@ -47,20 +47,14 @@ class Page extends XmlFile {
   
   private static $cache = array();
 
-  private $slug;
-
   public function __construct($slug, $cache=false) {
     if (array_key_exists($slug, self::$cache)) {
       $this->root = self::$cache[$slug];
+      $this->path = ES_PAGESPATH;
     } else {
-      parent::__construct(ES_PAGESPATH.$slug.'.xml', '<page></page>');
+      parent::__construct(ES_PAGESPATH, $slug, '<page></page>');
       if ($cache) self::$cache[$slug] = $this->root;
     }
-    $this->slug = $slug;
-  }
-  
-  public function getSlug() {
-    return $this->slug;
   }
   
   public function isPublic() {
@@ -80,22 +74,6 @@ class Page extends XmlFile {
     $from = $this->getTime('publishFrom');
     $until = $this->getTime('publishUntil');
     return $from <= $now && $now < $until;
-  }
-  
-  public function savePage() {
-    return $this->save(ES_PAGESPATH.$this->slug.'.xml', true);
-  }
-  
-  public static function existsPage($slug) {
-    return file_exists(ES_PAGESPATH.$slug.'.xml');
-  }
-  
-  public static function deletePage($slug) {
-    return self::delete(ES_PAGESPATH.$slug.'.xml', true);
-  }
-
-  public static function getSlugs() {
-    return self::listSlugs(ES_PAGES_PATH);
   }
   
   public static function getFieldTypes($objType) {

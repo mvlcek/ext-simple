@@ -8,75 +8,101 @@
 # +--------------------------------------------------------------------+
 
 require_once(ES_ADMINPATH.'inc/file.class.php');
-
+require_once(ES_ADMINPATH.'inc/page.class.php');
+ 
 class Navigation extends XmlFile {
 
-  private static $cache = array();
-  
-  private $items = array();
+  private static $cache = null;  
 
-  public function __construct($filename) {
-    if (array_key_exists($filename, self::$cache)) {
-      $this->root = self::$cache[$filename];
-    } else {
-      parent::__construct($filename, '<items></items>');
-      self::$cache[$filename] = $this->root;
-    }
-    foreach ($this->root->item as $item) {
-      $this->items[$item['slug']] = $item;
+  public static function getCache() {
+    if (!self::$cache) self::$cache = new Navigation();
+    return self::$cache;
+  }
+
+  public static function existsCache() {
+    return file_exists(ES_CACHEPATH.'navigation.xml');
+  }
+
+  public function __construct() {
+    parent::__construct(ES_CACHEPATH.'navigation.xml', '<pages></pages>');
+    if ($this->isNew()) {
+      $this->create();
+      $this->save();
     }
   }
   
-  public function create($path, $objTypeAttr) {
-    $objClass = self::getObjectClassFromPath($path);
-    # remove all items
+  public function create() {
+    # remove all pages
     $items = $this->items;
     for ($i=count($items)-1; $i>=0; $i--) unset($items[$i]);
-    $this->items = array();
-    # get slugs in path ...
-    $slugs = self::listSlugs($path);
-    # ... and index them
-    foreach ($slugs as $slug) {
-      $file = new XmlFile($path.$slug.'.xml');
-      if (!$file->isNew()) {
-        $this->addItem($objClass, $slug, $file, $objTypeAttr);
+    # parse all pages ...
+    $dir = opendir(ES_PAGESPATH);
+    if ($dir) while (($filename = readdir($dir)) !== false) {
+      if (substr($filename,-4) == '.xml') {
+        $slug = substr($filename,0,-4);
+        $this->addPage($slug);
       }
-    } 
+    }
+    closedir($dir);
   }
   
-  public function remove($path, $slug) {
-    if (isset($items[$slug])) {
-      $items = $this->items;
-      for ($i=count($items)-1; $i>=0; $i--) {
-        if ($items[$i]['slug'] == $slug) unset($items[$i]);
-      }
-      unset($this->items[$slug]);
+  public function removePage($slug) {
+    $pages = $this->root->pages;
+    for ($i=count($pages)-1; $i>=0; $i--) {
+      if ($pages[$i]['slug'] == $slug) unset($pages[$i]);
     }
   }
   
-  public function update($path, $slug, $objTypeAttr) {
+  public function updatePage($slug) {
     # remove item
-    $this->remove($path, $slug);
+    $this->remove($slug);
     # add item, if it exists
-    $file = new XmlFile($path.$slug.'.xml');
-    if (!$file->isNew()) {
-      $objClass = self::getObjectClassFromPath($path);
-      $this->addItem($objClass, $slug, $file, $objTypeAttr);
-    }
+    $this->addPage($slug);
   }
   
-  private function addItem($objClass, $slug, $file, $objTypeAttr) {
-    $itemNode = $this->root->addChild('item');
-    $itemNode->addAttribute('slug', $slug);
-    $objType = $objTypeAttr ? (string) $file->root->$objTypeAttr : null;
-    foreach ($file->root->children() as $node) {
-      $fieldType = self::getFieldType($objClass, $objType, $node->getName());
-      if ($fieldType != self::FIELDTYPE_HTML) {
-        $fieldNode = $itemNode->addChild($node->getName(), (string) $node);
-        if ($node['variant']) $fieldNode->addAttribute('variant', $node['variant']);
+  public function save() {
+    return $this->saveTo(ES_CACHEPATH.'navigation.xml', false);
+  }
+  
+  private function addPage($slug) {
+    $page = new Page($slug);
+    if (!$page->isNew()) {
+      $pageNode = $this->root->addChild('page');
+      $pageNode->addAttribute('slug', $page->getSlug());
+      $propNames = array('slug', 'menuState', 'parent', 'previous', 
+        'title', 'menuText', 'tags', 'publishFrom', 'publishTo');
+      foreach ($page->root->children() as $prop) {
+        if (in_array($prop->getName(), $propNames)) {
+          $pageProp = $pageNode->addChild($prop->getName(), (string) $prop);
+          foreach ($prop->attributes() as $attrName => $attrValue) {
+            $pageProp[$attrName] = $attrValue;
+          }
+        }
       }
     }
-    $this->items[$slug] = $itemNode;
   }
   
+  public static function onPageSave($page) {
+    if (self::existsCache()) {
+      $cache = self::getCache();
+      $cache->updatePage($page->getSlug());
+      $cache->save();
+    } else {
+      self::getCache();
+    }
+  }
+  
+  public static function onPageDelete($slug) {
+    if (self::existsCache()) {
+      $cache = self::getCache();
+      $cache->removePage($slug);
+      $cache->save();
+    } else {
+      self::getCache();
+    }
+  }
+   
 }
+
+addListener('save-page', 'Navigation::onPageSave');
+addListener('delete-page', 'Navigation::onPageDelete');
