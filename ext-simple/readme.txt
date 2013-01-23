@@ -20,21 +20,89 @@ advantages compared to GetSimple:
  
 Actions, Filters, etc.:
   Frontend:
-    before-template
-    before-header
-    put-header() => 1, if done
-    after-header
-    before-navigation
-    put-navigation($slug, $minlevel, $maxlevel, $type, $options) => 1, if done
-    after-navigation
-    before-content
-    filter-content($content) => (un)modified content
-    after-content
-    before-footer
-    put-footer() => 1, if done
-    after-footer
-    after-template
+    init-page
+    veto-page
+    before-page
+    Template:
+      before-header
+      put-header() => 1, if done
+      after-header
+      before-navigation
+      put-navigation($slug, $minlevel, $maxlevel, $type, $options) => 1, if done
+      after-navigation
+      before-content
+      filter-content($content) => (un)modified content
+      after-content
+      before-footer
+      put-footer() => 1, if done
+      after-footer
+      after-template
   Backend:
+    init-admin-page
+    veto-admin-page
+    before-admin-page
+    Template
+      before-admin-header
+      after-admin-header
+      before-admin-tabs
+      add-admin-tab
+      after-admin-tabs
+      before-admin-actions
+      add-admin-action-xxx
+      after-admin-actions
+      before-admin-footer
+      after-admin-footer
+    Pages:
+      create-page
+      get-page-slug
+      edit-page-options($page)
+      edit-page-content($page)
+      edit-page-extras($page)
+      get-page-slug($page)
+      before-save-page($page)
+      after-save-page($page)
+      undo-save-page($slug)
+      after-delete-page($slug)
+      undo-delete-page($slug)
+      after-rename-page($slug, $newSlug)
+      undo-rename-page($oldSlug, $slug)
+    Components:
+      edit-component-extras($component)
+      get-component-slug($component)
+      before-save-component($component)
+      after-save-component($component)
+      undo-save-component($slug)
+      after-delete-component($slug)
+      undo-delete-component($slug)
+      after-rename-component($slug)
+      undo-rename-component($slug)
+    Files:
+      after-upload-file
+      edit-file-extras
+      before-save-file
+      after-save-file
+      undo-save-file
+      after-delete-file
+      undo-delete-file
+    Theme:
+      after-save-theme
+      undo-save-theme
+    Plugins:
+      process-plugin-xxx
+      display-plugin-xxx
+      edit-plugin-extras
+    Settings:
+      edit-settings-extras
+      before-save-settings
+      after-save-settings
+      undo-save-settings
+    Users:
+      edit-user-extras
+      before-save-user
+      after-save-user
+      undo-save-user
+      after-delete-user
+      undo-delete-user
   
 Settings:
   variants: each page might exist in multiple variants (e.g. languages)

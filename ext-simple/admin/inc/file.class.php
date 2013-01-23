@@ -7,10 +7,13 @@
 # | License: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)          |
 # +--------------------------------------------------------------------+
 
+if(!defined('IN_ES')) die('You cannot load this page directly.'); 
+
 require_once(ES_ADMINPATH.'inc/log.class.php');
 require_once(ES_ADMINPATH.'inc/plugins.php');
 require_once(ES_ADMINPATH.'inc/settings.class.php');
 
+# TODO: use TimeMachine class instead of manually making backups
 class DataFile {
 
   static public function isFileInDataPath($filename) {
@@ -111,16 +114,17 @@ class DataDir {
   
   static public function createDir($dirname) {
     self::checkDirName($dirname);
-    $parent = dirname($dirname);
-    if ($parent != '.' && !file_exists($parent)) {
-      if (!self::createDir($parent)) return false;
-    }
-    if (mkdir($dirname)) {
-      self::setFileAttributes($dirname);
-      return true;
+    if (file_exists($dirname)) {
+      return is_dir($dirname);
     } else {
-      return false;
-    }
+      self::createDir(dirname($dirname));
+      if (mkdir($dirname)) {
+        self::setFileAttributes($dirname);
+        return true;
+      } else {
+        return false;
+      }
+    } 
   }
   
   static public function deleteDir($dirname, $recursive=false) {
@@ -145,18 +149,6 @@ class DataDir {
 
 
 class XmlFile extends DataFile {
-
-  const FIELDTYPE_ENUM  = 'enum';   # enumeration
-  const FIELDTYPE_TEXT  = 'text';
-  const FIELDTYPE_HTML  = 'html';
-  const FIELDTYPE_DATE  = 'date';
-  const FIELDTYPE_INT   = 'int';
-  const FIELDTYPE_FLOAT = 'float';
-  const FIELDTYPE_LIST  = 'list';   # comma separated list
-  const FIELDTYPE_REF   = 'ref';    # reference to another object (slug)
-  const FIELDTYPE_USER  = 'user';   # user name
-
-  private static $fieldTypes = array();
 
   public $root = null;
   public $new = false;
@@ -191,21 +183,38 @@ class XmlFile extends DataFile {
     }
   }
   
-  public function getString($name, $variants=null) {
-    return self::getStringPropertyOf($this->root, $name, $variants);
+  public function setProperty($parentNode, $name, $value, $variant=null) {
+    if (!$parentNode) $parentNode = $this->root;
+    $nodes = $parentNode->$name;
+    if (count($nodes) > 0) {
+      # remove already existing nodes with this $variant
+      for ($i=count($nodes)-1; $i>=0; $i--) {
+        $var = @$nodes[$i]['variant'];
+        if ($var == $variant) unset($nodes[$i]);
+      }
+    }
+    if (is_array($value)) {
+      # $value is an array -> add multiple nodes
+      foreach ($value as $val) {
+        $node = $parentNode->addChild($name, $val);
+        if ($variant !== null) $node['variant'] = $variant;
+      }
+    } else {
+      # only a singe value -> single node
+      $node = $parentNode->addChild($name, $value);
+      if ($variant !== null) $node['variant'] = $variant;
+    }
   }
   
-  public function getTime($name, $variants=null) {
-    return self::getTimePropertyOf($this->root, $name, $variants);
-  }
-  
-  public static function getStringPropertyOf($parentNode, $name, $variants=null) {
+  public function getProperty($parentNode, $name, $variants=null) {
     if (!is_array($variants)) $variants = array($variants);
     $variantValues = array();
+    if (!$parentNode) $parentNode = $this->root;
     if (count($parentNode->$name) > 0) {
-      foreach ($parentNode->$name as $field) {
-        $variant = @$field['variant'];
-        $variantValues[$variant] = (string) $field;
+      foreach ($parentNode->$name as $node) {
+        $variant = @$node['variant'];
+        if (!array_key_exists($variant, $variantValues)) $variantValues[$variant] = array();
+        $variantValues[$variant][] = (string) $node;
       }
     }
     foreach ($variants as $variant) {
@@ -214,8 +223,13 @@ class XmlFile extends DataFile {
     return null;
   }
   
-  public static function getTimePropertyOf($parentNode, $name, $variants=null) {
-    $value = self::getStringPropertyOf($parentNode, $name, $variants);
+  public function getStringProperty($parentNode, $name, $variants=null) {
+    $value = $this->getProperty($parentNode, $name, $variants);
+    return $value === null ? null : join('', $value);
+  }
+  
+  public function getTimeProperty($parentNode, $name, $variants=null) {
+    $value = $this->getStringProperty($parentNode, $name, $variants);
     return is_numeric($value) ? (int) $value : strtotime($value);
   }
   
@@ -223,9 +237,19 @@ class XmlFile extends DataFile {
 
 class XmlSlugFile extends XmlFile {
 
+  const FIELDTYPE_ENUM  = 'enum';   # enumeration
+  const FIELDTYPE_TEXT  = 'text';
+  const FIELDTYPE_HTML  = 'html';
+  const FIELDTYPE_DATE  = 'date';
+  const FIELDTYPE_INT   = 'int';
+  const FIELDTYPE_FLOAT = 'float';
+  const FIELDTYPE_LIST  = 'list';   # comma separated list
+  const FIELDTYPE_REF   = 'ref';    # reference to another object (slug)
+  const FIELDTYPE_USER  = 'user';   # user name
+
   private static $translit = null;
 
-  public $path = null;
+  protected $path = null;
 
   public function __construct($path, $slug, $rootElement='<root></root>') {
     if (substr($path,-1) != '/') $path .= '/';
@@ -236,6 +260,27 @@ class XmlSlugFile extends XmlFile {
   
   public function getSlug() {
     return (string) $this->root->slug;
+  }
+  
+  public function setSlug($slug) {
+    $this->root->slug = $slug;
+  }
+  
+  public function get($name, $variants=null) {
+    return $this->getProperty($this->root, $name, $variants);
+  }
+  
+  public function getString($name, $variants=null) {
+    return $this->getStringProperty($this->root, $name, $variants);
+  }
+  
+  public function getTime($name, $variants=null) {
+    return $this->getTimeProperty($this->root, $name, $variants);
+  }
+  
+  public function set($name, $value, $variant=null) {
+    if ($name == 'slug') throw new Exception('Use setSlug() to set the slug!');
+    return $this->setProperty($this->root, $name, $value, $variant);
   }
   
   public function save() {
@@ -325,31 +370,6 @@ class XmlSlugFile extends XmlFile {
     }
     closedir($dir);
     return $slugs;
-  }
-  
-  public static function getFieldTypes($objClass, $objType) {
-    $fullType = $objClass . ($objType ? '-'.$objType : '');
-    if (!isset(self::$fieldTypes[$fullType])) {
-      self::$fieldTypes[$fullType] = execForInfo('get-fieldtypes-'.$objClass, $objType);
-    }
-    return self::$fieldTypes[$fullType];
-  }
-  
-  public static function getFieldType($objClass, $objType, $name) {
-    $fullType = $objClass . ($objType ? '-'.$objType : '');
-    $types = self::getFieldTypes($fullType);
-    return @$types[$name];
-  }
-  
-  /**
-   * The object class is the part of the path after ES_DATAPATH, e.g. 'pages'
-   */
-  public static function getObjectClassFromPath($path) {
-    if (substr($path,-1) == '/') $path = substr($path,0,-1);
-    if (substr($path,0,strlen(ES_DATAPATH)) == ES_DATAPATH) {
-      return substr($path, strlen(ES_DATAPATH)+1);
-    }
-    return $path;
   }
   
 }
