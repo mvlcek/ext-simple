@@ -82,7 +82,7 @@ class TimeMachine extends XmlFile {
           foreach ($step->param as $param) $params[] = (string) $param;
           if ($step->filename) {
             if (file_exists(ES_DATAPATH.$step->filename)) {
-              if (! self::backup($newName, $step->undoMessage, $step->message, $step->filename, $params);
+              if (! self::backup($newName, $step->undoMessage, $step->message, $step->filename, $params)) ;
             }
           }
         }
