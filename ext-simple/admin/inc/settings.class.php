@@ -24,8 +24,8 @@ class Settings extends XmlFile {
     return new Settings();
   }
 
-  public function saveSettings() {
-    return $this->save(ES_SETTINGSPATH.'website.xml', true);
+  public function save() {
+    return $this->saveTo(ES_SETTINGSPATH.'website.xml', true);
   }
   
   public static function get($name, $default='') {

@@ -382,5 +382,17 @@ class SimpleXMLExtended extends SimpleXMLElement{
     $no = $node->ownerDocument;   
     $node->appendChild($no->createCDATASection($cdata_text));   
   } 
+  
+  public function addChild($name, $value=null) {
+    if ($value == null) {
+      parent::addChild($name); 
+    } else {
+      parent::addChild($name, htmlspecialchars($value));
+    }
+  }
+  
+  public function parent() {
+    return current($this->xpath('parent::*'));
+  }
 
 } 
