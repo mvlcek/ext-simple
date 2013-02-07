@@ -17,9 +17,6 @@ require_once(ES_ADMINPATH.'inc/plugins.php');
  *   - type: type of page: e.g. built in "normal", "link"
  *   - visibility: visibility of page, e.g. "private"
  *   - template: the template to use when displaying this page
- *   - parent: the parent page's slug or empty
- *   - previous: the previous sibling page's slug or empty
- *   - menuState: whether the page is displayed in the menu ("visible")
  *   
  * - Text properties, may exist in multiple variants (attribute variant="..."):
  *   - title: the title of the page (text)
@@ -46,15 +43,24 @@ class Page extends XmlSlugFile {
   const MENU_VISIBLE = 'visible';
   
   private static $cache = array();
+  
+  private $fieldCache = array();
 
-  public function __construct($slug, $cache=false) {
-    if (array_key_exists($slug, self::$cache)) {
-      $this->root = self::$cache[$slug];
-      $this->path = ES_PAGESPATH;
+  public static function existsPage($slug) {
+    return self::exists(ES_PAGESPATH, $slug);
+  }
+
+  public static function getPage($slug) {
+    $fileSlug = self::getFileSlug($slug);
+    if (array_key_exists($fileSlug)) {
+      return self::$cache[$fileSlug];
     } else {
-      parent::__construct(ES_PAGESPATH, $slug, '<page></page>');
-      if ($cache) self::$cache[$slug] = $this->root;
+      return self::$cache[$fileSlug] = new Page($slug);
     }
+  }
+
+  public function __construct($slug) {
+    parent::__construct(ES_PAGESPATH, $slug, '<page></page>');
   }
   
   public function isPublic() {
@@ -65,15 +71,23 @@ class Page extends XmlSlugFile {
     return self::VISIBILITY_PRIVATE == (string) $this->visibility;
   }
   
-  public function isInMenu() {
-    return self::MENU_VISIBLE == (string) $this->menuState;
-  }
-  
   public function isPublished() {
     $now = time();
     $from = $this->getTime('publishFrom');
     $until = $this->getTime('publishUntil');
     return $from <= $now && $now < $until;
+  }
+
+  public function getFilteredString($name, $variants=null) {
+    $key = $name.':'.join(':', $variants);
+    if (array_key_exists($key, $this->fieldCache)) {
+      return $this->fieldCache[$key];
+    } else {
+      $value = $this->getString($name, $variants);
+      $value = execFilter('filter-content', array($value, $name));
+      $this->fieldCache[$key] = $value;
+      return $value;
+    }
   }
   
   public static function getFieldTypes($objType) {
@@ -100,5 +114,6 @@ class Page extends XmlSlugFile {
   }
 
 }
+
 
 addListener('get-fieldtypes-pages', 'Page::getFieldTypes');

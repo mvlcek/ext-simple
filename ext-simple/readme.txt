@@ -20,8 +20,8 @@ advantages compared to GetSimple:
  
 Actions, Filters, etc.:
   Frontend:
+    veto-page($page) => 1, if page
     init-page
-    veto-page
     before-page
     Template:
       before-header

@@ -14,8 +14,11 @@ class Plugins {
   private static $plugins = array();
   private static $listeners = array();
 
-  private static function getEnabledPlugins() {
-    return file(ES_SETTINGSPATH.'plugins.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+  public static function getEnabledPlugins() {
+    if (file_exists(ES_SETTINGSPATH.'plugins.txt')) {
+      return file(ES_SETTINGSPATH.'plugins.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    }
+    return array();
   }
   
   private static function setEnabledPlugins($plugins=array()) {
@@ -36,16 +39,13 @@ class Plugins {
   }
 
   public static function registerPlugin($id, $name, $version=null, 
-      $author=null, $website=null, $description=null, 
-      $tab=null, $callback=null, $requires=null) {
+      $author=null, $website=null, $description=null, $requires=null) {
     self::$plugins[$id] = array(
       'name' => $name,
       'version' => $version,
       'author' => $author,
       'website' => $website,
       'description' => $description,
-      'tab' => $tab,
-      'callback' => $callback,
       'requires' => $requires
     );
     self::$currentPlugin = $id;
@@ -120,7 +120,7 @@ class Plugins {
   }
   
   public static function execForInfo($hook, $args=null) {
-    if (!isset(self::$listeners[$hook])) return null;
+    if (!isset(self::$listeners[$hook])) return array();
     if ($args === null) $args = array(); else if (!is_array($args)) $args = array($args);
     $info = array();
     foreach (self::$listeners[$hook] as $listener) {

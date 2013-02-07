@@ -206,7 +206,7 @@ class XmlFile extends DataFile {
     }
   }
   
-  public function getProperty($parentNode, $name, $variants=null) {
+  public function getPropertyValues($parentNode, $name, $variants=null) {
     if (!is_array($variants)) $variants = array($variants);
     $variantValues = array();
     if (!$parentNode) $parentNode = $this->root;
@@ -224,7 +224,7 @@ class XmlFile extends DataFile {
   }
   
   public function getStringProperty($parentNode, $name, $variants=null) {
-    $value = $this->getProperty($parentNode, $name, $variants);
+    $value = $this->getPropertyValues($parentNode, $name, $variants);
     return $value === null ? null : join('', $value);
   }
   
@@ -266,8 +266,8 @@ class XmlSlugFile extends XmlFile {
     $this->root->slug = $slug;
   }
   
-  public function get($name, $variants=null) {
-    return $this->getProperty($this->root, $name, $variants);
+  public function getValues($name, $variants=null) {
+    return $this->getPropertyValues($this->root, $name, $variants);
   }
   
   public function getString($name, $variants=null) {
@@ -292,12 +292,12 @@ class XmlSlugFile extends XmlFile {
     return $this->saveTo($this->path.self::getFileSlug($this->getSlug()).'.xml', true);
   }
   
-  public static function exists($slug) {
-    return file_exists($this->path.self::getFileSlug($this->getSlug()).'.xml');    
+  public static function exists($path, $slug) {
+    return file_exists($path.self::getFileSlug($slug).'.xml');    
   }
   
-  public static function delete($slug) {
-    return self::deleteFile($this->path.self::getFileSlug($this->getSlug()).'.xml', true);
+  public static function delete($path, $slug) {
+    return self::deleteFile($path.self::getFileSlug($slug).'.xml', true);
   }
   
   public static function getFileSlug($slug) {
@@ -324,13 +324,13 @@ class XmlSlugFile extends XmlFile {
             'к=k,л=l,м=m,н=n,о=o,п=p,р=r,с=s,т=t,у=u,ф=f,'.
             'х=kh,ц=c,ч=ch,ш=sh,щ=shch,ъ=,ы=y,ь=,э=eh,ю=ju,я=ja';
       }
-      $translit = preg_split('/[\s\n\r\t]+/');
+      $translit = preg_split('/[\s\n\r\t]+/', $translit);
       self::$translit = array();
       foreach ($translit as $item) {
         $pos = strpos($item,'=',1);
         if ($pos !== false) {
-          self::$trans[substr($item,0,$pos)] = substr($item,$pos+1); 
-        } else self::$trans[$item] = $item;
+          self::$translit[substr($item,0,$pos)] = substr($item,$pos+1); 
+        } else self::$translit[$item] = $item;
       }
     }
     $fileslug = '';
@@ -338,7 +338,7 @@ class XmlSlugFile extends XmlFile {
       $len = mb_strlen($slug);
       for ($i=0; $i<$len; $i++) {
         $c = mb_substr($slug, $i, $i+1);
-        if (strpos('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',c) !== false) {
+        if (strpos('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',$c) !== false) {
           $fileslug .= $c;
         } else if (isset($translit[$c])) {
           $fileslug .= $translit[$c];
@@ -350,7 +350,7 @@ class XmlSlugFile extends XmlFile {
       $len = strlen($slug);
       for ($i=0; $i<$len; $i++) {
         $c = substr($slug, $i, $i+1);
-        if (strpos('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',c) !== false) {
+        if (strpos('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',$c) !== false) {
           $fileslug .= $c;
         } else if (isset($translit[$c])) {
           $fileslug .= $translit[$c];
@@ -383,11 +383,11 @@ class SimpleXMLExtended extends SimpleXMLElement{
     $node->appendChild($no->createCDATASection($cdata_text));   
   } 
   
-  public function addChild($name, $value=null) {
+  public function addChild($name, $value=null, $namespace=null) {
     if ($value == null) {
-      parent::addChild($name); 
+      parent::addChild($name, null, $namespace); 
     } else {
-      parent::addChild($name, htmlspecialchars($value));
+      parent::addChild($name, htmlspecialchars($value), $namespace);
     }
   }
   

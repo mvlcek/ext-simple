@@ -124,18 +124,28 @@ function get_slug() {
 
 function get_field($name) {
   $page = Common::getPage();
-  return $page ? $page->getField($name, Common::getVariant()) : null;
+  return $page ? $page->get($name, Common::getVariants()) : null;
 }
 
-function get_field_as_timestamp($name) {
-  $value = get_field($name);
-  return !is_numeric($value) ? strtotime($value): (int) $value;  
+function get_string_field($name) {
+  $page = Common::getPage();
+  return $page ? $page->getString($name, Common::getVariants()) : null;
+}
+
+function get_time_field($name) {
+  $page = Common::getPage();
+  return $page ? $page->getTime($name, Common::getVariants()) : null;
+}
+
+function get_filtered_field($name) {
+  $page = Common::getPage();
+  return $page ? $page->getFilteredString($name, Common::getVariants()) : null;
 }
 
 if (!function_exists('get_page_field')) {
   function get_page_field($slug, $name) {
     $page = new Page($slug, true);
-    return $page ? $page->getField($name, Common::getVariant()) : null;
+    return $page ? $page->getField($name, Common::getVariants()) : null;
   }
 }
 

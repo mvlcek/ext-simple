@@ -14,7 +14,7 @@ class Settings extends XmlFile {
   private static $settings = null;
   private static $websiteUrl = null;
 
-  private function __construct() {
+  public function __construct() {
     parent::__construct(ES_SETTINGSPATH.'website.xml');
     if (!isset($this->root->salt)) $this->root->salt = sha1(rand().time()); 
   }

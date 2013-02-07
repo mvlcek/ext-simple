@@ -10,9 +10,48 @@
 require_once(ES_ADMINPATH.'inc/file.class.php');
 require_once(ES_ADMINPATH.'inc/page.class.php');
  
+class GenericNavigation extends XmlFile {
+  
+  private $name = null;
+  private $path = null;
+  private $cache = null;
+  
+  public function __construct($name='navigation', $path=ES_PAGESPATH) {
+    parent::__construct(ES_SETTINGSPATH.$name.'.xml');
+    $this->cache = new NavigationCache(ES_CACHEPATH.$name.'.xml', $path, true, true);
+    $this->name = $name;
+    $this->path = $path;
+  }
+  
+  public function getPageNode($slug) {
+    $pageNode = $this->root->xpath("//page[@slug='$slug']");
+    if (!$pageNode || count($pageNode) < 1) return null;
+    return current($pageNode);
+  }
+  
+  public function setPageNode($slug, $parent=null, $after=null, $params=null) {
+    $pageNode = getPageNode($slug);
+    if (!$pageNode) {
+      
+    }
+  }
+  
+}
+ 
+ 
 class Navigation extends XmlFile {
 
+  private static $navigation = null;
   private static $cache = null;  
+  
+  private function __construct() {
+    parent::__construct(ES_SETTINGSPATH.'navigation.xml');
+    if (!isset($this->root->salt)) $this->root->salt = sha1(rand().time()); 
+  }
+  
+  public static function getNavigation() {
+    
+  }
   
   public static function onPageSave($page) {
     // TODO: update navigation
@@ -40,8 +79,7 @@ class NavigationCache extends AbstractSlugFileCache {
   }
   
   protected function isCacheable($item, $name) {
-    return in_array(array('slug', 'menuState', 'parent', 'previous', 
-        'title', 'menuText', 'tags', 'publishFrom', 'publishTo'), $name);
+    return in_array(array('slug', 'menuState', 'title', 'tags', 'publishFrom', 'publishTo'), $name);
   }
    
 }

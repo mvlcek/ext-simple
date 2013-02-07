@@ -28,6 +28,7 @@ class Init {
   private static $language = null;
   private static $variants = null;
   private static $user = false;
+  private static $page = null;
   
   public static function definePaths() {
     $pos = strrpos(dirname(__FILE__),DIRECTORY_SEPARATOR.'inc');
@@ -134,6 +135,14 @@ class Init {
     } else {
       setlocale(LC_ALL, preg_split('/\s*,\s*/', $locale));
     }
+  }
+  
+  public static function setPage($page) {
+    self::$page = $page;
+  }
+  
+  public static function getPage() {
+    return self::$page;
   }
   
 }
@@ -251,16 +260,7 @@ class Common {
   }
   
   public static function getPage() {
-    if (!self::$page) {
-      if (!self::isFrontend()) return null;
-      $slug = $_REQUEST['id'];
-      if (Page::existsPage($slug)) {
-        self::$page = new Page($slug);
-      } else if (Page::existsPage('404')) {
-        self::$page = new Page('404');
-      }
-    }
-    return self::$page;
+    return Init::getPage();
   }
   
   public static function addStyle($name, $src, $version=null, $media=null) {
@@ -300,10 +300,10 @@ class Common {
  * @param string $name
  * @param varargs $args
  */
-function get_s($name, $args) {
+function get_s($name, $args=null) {
   $args = func_get_args();
   array_shift($args);
-  return I18nHelper::getString($name, $args);
+  return Common::getString($name, $args);
 }
 
 /**
@@ -317,12 +317,12 @@ function get_s($name, $args) {
 function put_s($name, $args) {
   $args = func_get_args();
   array_shift($args);
-  echo I18nHelper::getString($name, $args);
+  echo Common::getString($name, $args);
 }
 
 
-function put_date($date, $format=null, $default=null) {
-  $time = is_numeric($date) ? (int) $date : strtotime($date);
+function put_time($time, $format=null, $default=null) {
+  $time = is_numeric($time) ? (int) $time : strtotime($time);
   if ($time) {
     if ($format) {
       $fmt = get_s('DATE_FORMAT_'.$format);
