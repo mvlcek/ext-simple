@@ -9,7 +9,9 @@
 
 class TemplateHelper {
   
-  function getAccessKey($text) {
+  private static $tab = 'pages';
+  
+  public static function getAccessKey($text) {
     if (preg_match('/<em>(\w)<\/em>/', $text, $match)) {
       $c = $match[1];
       return function_exists('mb_strtolower') ? mb_strtolower($c) : strtolower($c); 
@@ -17,8 +19,16 @@ class TemplateHelper {
     return null;
   }
   
-  function getLanguage() {
+  public static function getLanguage() {
     return Settings::get('language', 'en_US');
+  }
+  
+  public static function setTab(String $tab) {
+    self::$tab = $tab;
+  }
+  
+  public static function getTab(String $tab) {
+    return self::$tab;
   }
   
 }
@@ -86,4 +96,14 @@ function put_es_menu_entry($script, $txt, $always=true) {
   }
 }
 
+function set_tab($tab) {
+  TemplateHelper::setTab($tab);
+}
 
+function set_tab_if($tab, $action) {
+  $actions = func_get_args();
+  array_shift($actions);
+  foreach ($actions as $action) {
+    if (isset($_REQUEST[$action])) { TemplateHelper::setTab($tab); return; }
+  }
+}

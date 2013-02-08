@@ -7,6 +7,8 @@
 # | License: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)          |
 # +--------------------------------------------------------------------+
 
+# requires ES_SETTINGSPATH, ES_PLUGINSPATH
+
 class Plugins {
 
   private static $currentPlugin = null;
@@ -14,39 +16,54 @@ class Plugins {
   private static $plugins = array();
   private static $listeners = array();
 
-  public static function getEnabledPlugins() {
+
+  public static function loadPlugins() {
+    $enabledPluginIds = Plugins::getEnabledPluginIds();
+    foreach ($enabledPluginIds as $name) {
+      self::loadPlugin($name);
+    }
+  }
+  
+  public static function loadPlugin($name) {
+    if (file_exists(ES_PLUGINSPATH.$name.'.php')) {
+      require_once(ES_PLUGINSPATH.$name.'.php');
+    }
+  }
+
+  public static function getEnabledPluginIds() {
     if (file_exists(ES_SETTINGSPATH.'plugins.txt')) {
       return file(ES_SETTINGSPATH.'plugins.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     }
     return array();
   }
   
-  private static function setEnabledPlugins($plugins=array()) {
-    return file_put_contents(ES_SETTINGSPATH.'plugins.txt', implode(PHP_EOL, $plugins)) !== false;
+  private static function setEnabledPluginIds($pluginIds=array()) {
+    return file_put_contents(ES_SETTINGSPATH.'plugins.txt', implode(PHP_EOL, $pluginIds)) !== false;
   }
 
   public static function enablePlugin($id) {
-    $plugins = self::getEnabledPlugins();
-    $index = array_search($id, $plugins);
-    if ($index !== false) unset($plugins[$index]);
-    self::setEnabledPlugins($plugins);
+    $pluginIds = self::getEnabledPluginIds();
+    if (!in_array($id, $pluginIds)) $pluginIds[] = $id;
+    self::setEnabledPluginIds($pluginIds);
   }
   
   public static function disablePlugin($id) {
-    $plugins = self::getEnabledPlugins();
-    if (!in_array($id, $plugins)) $plugins[] = $id;
-    self::setEnabledPlugins($plugins);
+    $pluginIds = self::getEnabledPluginIds();
+    $index = array_search($id, $pluginIds);
+    if ($index !== false) unset($pluginIds[$index]);
+    self::setEnabledPluginIds($pluginIds);
   }
 
   public static function registerPlugin($id, $name, $version=null, 
-      $author=null, $website=null, $description=null, $requires=null) {
+      $author=null, $website=null, $description=null, $language=null, $requires=null) {
     self::$plugins[$id] = array(
       'name' => $name,
       'version' => $version,
       'author' => $author,
       'website' => $website,
       'description' => $description,
-      'requires' => $requires
+      'language' => $language,
+      'requires' => (is_array($requires) ? $requires : $requires ? array($requires) : null)
     );
     self::$currentPlugin = $id;
   }
@@ -71,12 +88,12 @@ class Plugins {
   
   public static function callFunction($name, $args) {
     $pos = strpos($name, '::');
-    $fct = $pos >= 0 ? array(substr($name,0,$pos), substr($name, $pos+2)) : $name;
+    $fct = $pos > 0 ? array(substr($name,0,$pos), substr($name, $pos+2)) : $name;
     return call_user_func_array($fct, $args); 
   }
   
   private static function callListener($listener, $args) {
-    if (is_debug()) Log::debug('Calling listener %s of plugin %s.', $listener['function'], $listener['plugin']);
+    #if (is_debug()) Log::debug('Calling listener %s of plugin %s.', $listener['function'], $listener['plugin']);
     return self::callFunction($listener['function'], array_merge($args, $listener['args']));
   }
   
@@ -136,21 +153,8 @@ class Plugins {
 }
 
 
-$enabledPlugins = Plugins::getEnabledPlugins();
-foreach ($enabledPlugins as $name) {
-  if (file_exists(ES_PLUGINSPATH.$name.'.php')) {
-    require_once(ES_PLUGINSPATH.$name.'.php');
-  }
-}
-unset($enabledPlugins);
-unset($name);
-
-function registerPlugin($id, $name, $version=null, $author=null, $website=null, $description=null, $tab=null, $callback=null, $requires=null) {
-  Plugins::registerPlugin($id, $name, $version, $author, $website, $description, $tab, $callback, $requires);
-}
-
-function getPlugin($id) {
-  return Plugins::getPlugin($id);
+function registerPlugin($id, $name, $version=null, $author=null, $website=null, $description=null, $language=null, $requires=null) {
+  Plugins::registerPlugin($id, $name, $version, $author, $website, $description, $language, $requires);
 }
 
 function addListener($hook, $function, $args=null) {

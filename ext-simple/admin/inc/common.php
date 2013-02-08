@@ -51,7 +51,7 @@ class Init {
     define('ES_THUMBNAILSPATH', ES_DATAPATH.'thumbs/');
     define('ES_LOGSPATH', ES_DATAPATH.'logs/');
     define('ES_BACKUPSPATH', ES_ROOTPATH.'backups/');
-    define('ES_THEMESPATH', ES_ROOTPATH.'theme/');
+    define('ES_THEMESPATH', ES_ROOTPATH.'themes/');
     define('ES_PLUGINSPATH', ES_ROOTPATH.'plugins/');
   }
 
@@ -63,6 +63,10 @@ class Init {
     } else {
       return stripslashes($value);
     }
+  }
+  
+  public static function setFrontend($isFrontend) {
+    self::$isFrontend = $isFrontend;
   }
   
   public static function isFrontend() {
@@ -255,12 +259,25 @@ class Common {
     return Init::getUser();
   }
   
+  public static function isLoggedIn() {
+    return Init::isLoggedIn();
+  }
+  
+  public static function ensureLoggedIn() {
+    if (!Init::isLoggedIn()) die('You are not allowed to view this page!');
+  }
+  
   public static function getLanguage() {
     return Init::getLanguage();
   }
   
   public static function getPage() {
     return Init::getPage();
+  }
+  
+  public static function loadPlugins() {
+    require_once(ES_ADMINPATH.'inc/plugins.php');
+    Plugins::loadPlugins();
   }
   
   public static function addStyle($name, $src, $version=null, $media=null) {

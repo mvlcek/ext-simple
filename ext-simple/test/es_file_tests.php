@@ -1,5 +1,5 @@
 <?php
-require_once('../admin/inc/file.class.php');
+require_once(ES_ADMINPATH.'inc/file.class.php');
 
 class ESFileTests extends ESTestCase {
 
