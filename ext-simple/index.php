@@ -9,7 +9,6 @@ print_r($_GET);
 
 require_once('esconfig.php');
 if (!defined('ES_ADMIN')) define('ES_ADMIN', 'admin');
-echo dirname(__FILE__).'/'.ES_ADMIN.'/inc/common.php';
 require_once(dirname(__FILE__).'/'.ES_ADMIN.'/inc/common.php');
 require_once(ES_ADMINPATH.'inc/page.class.php');
 require_once(ES_ADMINPATH.'inc/link.class.php');

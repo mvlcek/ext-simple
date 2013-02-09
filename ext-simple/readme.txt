@@ -20,26 +20,27 @@ advantages compared to GetSimple:
  
 Actions, Filters, etc.:
   Frontend:
-    veto-page($page) => 1, if page
+    veto-page($page) => read, if page is forbidden
     init-page
     before-page
     Template:
       before-header
-      put-header() => 1, if done
+      put-header() => true, if done
       after-header
       before-navigation
-      put-navigation($slug, $minlevel, $maxlevel, $type, $options) => 1, if done
+      put-navigation($slug, $minlevel, $maxlevel, $type, $options) => true, if done
       after-navigation
       before-content
       filter-content($content) => (un)modified content
       after-content
       before-footer
-      put-footer() => 1, if done
+      put-footer() => true, if done
       after-footer
       after-template
   Backend:
-    init-admin-page
     veto-admin-page
+    init-admin-page
+    (process-plugin-xxx)
     before-admin-page
     Template
       before-admin-header
@@ -50,6 +51,7 @@ Actions, Filters, etc.:
       before-admin-actions
       add-admin-action-xxx
       after-admin-actions
+      (display-plugin-xxx)
       before-admin-footer
       after-admin-footer
     Pages:
@@ -88,8 +90,8 @@ Actions, Filters, etc.:
       after-save-theme
       undo-save-theme
     Plugins:
-      process-plugin-xxx
-      display-plugin-xxx
+      process-plugin-xxx (in load.php, before before-admin-page)
+      display-plugin-xxx (in load.php, after
       edit-plugin-extras
     Settings:
       edit-settings-extras
