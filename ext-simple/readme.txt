@@ -9,6 +9,7 @@ advantages compared to GetSimple:
    - themes are easily configurable
    - supports multi-language sites out-of-the-box
    - support non-western (e.g. russian) URLs
+   - easily support
  - technical:
    - object oriented - classes designed for re-use in plugins
    - no addslashes, htmlentities, no cdata - just storing and retrieving data from XML
