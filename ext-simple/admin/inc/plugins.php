@@ -9,16 +9,69 @@
 
 # requires ES_SETTINGSPATH, ES_PLUGINSPATH
 
+
+/**
+ * Your plugins must be derived from this class
+ */
+abstract class AbstractPlugin {
+  
+  private $id = null;
+  private $name = null;
+  private $version = null;
+  private $author = null;
+  private $website = null;
+  private $description = null;
+  
+  /**
+   * @param string $name the human-readable name of the plugin
+   * @param string $version the version of the plugin, e.g. 0.3, 1.0.3
+   * @param string $author the author of the website (preferably real name)
+   * @param string $website a link to the website, where the plugin is described
+   * @param string $description a human-readable description
+   * @param string $language default language for loading resources/strings
+   */
+  protected function __construct($name, $version, $author, $website, $description) {
+    $this->name = $name;
+    $this->version = $version;
+    $this->author = $author;
+    $this->website = $website;
+    $this->description = $description;
+  }
+  
+  /**
+   * Add your listeners in this method
+   */
+  public function initialize($id) {
+    $this->id = $id;
+    // for adding listeners, e.g.
+    // addListener('filter-content', array($this,'filter'));
+  }
+  
+  public function getId() { return $this->id; }
+  public function getName() { return $this->name; }
+  public function getVersion() { return $this->version; }
+  public function getAuthor() { return $this->author; }
+  public function getWebsite() { return $this->website; }
+  public function getDescription() { return $this->description; }
+  
+  public function getDefaultLanguage() { return 'en_US'; }
+  
+  public function getRequiredPlugins() { return null; }
+  
+}
+
+
 /**
  * The Plugins class provides all functions for plugins.
  * The most important of these functions are also available as separate functions.
  */
 class Plugins {
 
-  private static $currentPlugin = null;
-  private static $allowListeners = true;
   private static $plugins = array();
   private static $listeners = array();
+
+  private static $currentPluginId = null;
+  private static $allowListeners = true;
 
   /**
    * Loads all enabled plugins
@@ -29,6 +82,8 @@ class Plugins {
     foreach ($enabledPluginIds as $id) {
       self::loadPlugin($id);
     }
+    // from now on adding listeners is not possible any more.
+    self::$allowListeners = false;
   }
   
   /**
@@ -37,9 +92,11 @@ class Plugins {
    * @param string $id the ID of the plugin
    */
   public static function loadPlugin($id) {
+    self::$currentPluginId = $id;
     if (file_exists(ES_PLUGINSPATH.$id.'.php')) {
       require_once(ES_PLUGINSPATH.$id.'.php');
     }
+    self::$currentPluginId = null;
   }
 
   /**
@@ -81,22 +138,13 @@ class Plugins {
     self::setEnabledPluginIds($pluginIds);
   }
 
-  public static function registerPlugin($id, $name, $version=null, 
-      $author=null, $website=null, $description=null, $language=null, $requires=null) {
-    self::$plugins[$id] = array(
-      'name' => $name,
-      'version' => $version,
-      'author' => $author,
-      'website' => $website,
-      'description' => $description,
-      'language' => $language,
-      'requires' => (is_array($requires) ? $requires : $requires ? array($requires) : null)
-    );
-    self::$currentPlugin = $id;
+  public static function getPlugin($id) {
+    return self::$plugins[$id];
   }
   
-  public static function getPlugin($name) {
-    return self::$plugins[$name];
+  public static function registerPlugin($plugin) {
+    self::$plugins[self::$currentPluginId] = $plugin;
+    $plugin->initialize(self::$currentPluginId);
   }
   
   /**
@@ -108,25 +156,33 @@ class Plugins {
     self::$allowListeners = $allow;
   }
   
-  public static function addListener($hook, $function, $args=null) {
+  public static function addListener($hook, $methodname, $args=null) {
     if (!self::$allowListeners) return;
     if (!array_key_exists($hook, self::$listeners)) self::$listeners[$hook] = array();
     self::$listeners[$hook][] = array(
-      'plugin' => self::$currentPlugin,
-      'function' => $function,
+      'pluginId' => self::$currentPluginId,
+      'method' => $methodname,
       'args' => $args ? $args : array()
     );
   }
   
-  private static function callFunction($name, $args) {
-    $pos = strpos($name, '::');
-    $fct = $pos > 0 ? array(substr($name,0,$pos), substr($name, $pos+2)) : $name;
-    return call_user_func_array($fct, $args); 
+  public static function hasListener($hook) {
+    return array_key_exists($hook, self::$listeners);
   }
   
   private static function callListener($listener, $args) {
     #if (is_debug()) Log::debug('Calling listener %s of plugin %s.', $listener['function'], $listener['plugin']);
-    return self::callFunction($listener['function'], array_merge($args, $listener['args']));
+    $functionname = $listener['method'];
+    if (($pos = strpos($functionname,'::')) !== false) {
+      if ($pos == 0) {
+        $function = substr($functionname,2);
+      } else {
+        $function = array(substr($functionname,0,$pos), substr($functionname,$pos+2));
+      } 
+    } else {
+      $function = array(self::$plugins[$listener['pluginId']], $functionname);
+    }
+    return self::call_user_func_array($function, array_merge($args, $listener['args']));
   }
   
   public static function execAction($hook, $args=null) {
@@ -181,36 +237,55 @@ class Plugins {
     }
     return $info;
   }
-    
+  
+  public static function filterContentPlaceholders($content) {
+    return preg_replace_callback("/(<p(?:\s[^>]*)>\s*)?\(%\s*([A-Za-z][A-Za-z0-9_-]*)(\s+(?:[^%]|%[^\)])+)?\s*%\)(\s*<\/p>)?/", 
+                                 array('Plugins','replacePlaceholder'), $content);
+  }
+  
+  public static function replacePlaceholder($match) {
+    $prefix = $match[1];
+    $name = $match[2];
+    $paramstr = @$match[3] ? html_entity_decode(trim($match[3]), ENT_QUOTES, 'UTF-8') : '';
+    $suffix = $match[4];
+    $params = array();
+    while (preg_match('/^([A-Za-z][A-Za-z0-9_-]*)[:=]([^"\'\s]*|"[^"]*"|\'[^\']*\')(?:\s|$)/', $paramstr, $pmatch)) {
+      $key = $pmatch[1];
+      $value = trim($pmatch[2]);
+      if (substr($value,0,1) == '"' || substr($value,0,1) == "'") $value = substr($value,1,strlen($value)-2);
+      $params[$key] = $value;
+      $paramstr = substr($paramstr, strlen($pmatch[0]));
+    }
+    $replacement = self::execWhile('replace-placeholder-'.$name, array($params, $prefix, $suffix), null);
+    return $replacement !== null ? (string) $replacement : $match[0];
+  }
+  
 }
 
 /**
- * Register a plugin
+ * Register a plugin. Must be called in the main plugin file.
  * 
  * @since 1.0
- * @param string $id the ID of the plugin, should be equal to basename(__FILE__,".php")
- * @param string $name the human-readable name of the plugin
- * @param string $version the version of the plugin, e.g. 0.3, 1.0.3
- * @param string $author the author of the website (preferably real name)
- * @param string $website a link to the website, where the plugin is described
- * @param string $description a human-readable description
- * @param string $language default language for loading resources/strings
+ * @param Plugin $plugin   the plugin, an instance of a class extending AbstractPlugin
  */
-function registerPlugin($id, $name, $version=null, $author=null, $website=null, $description=null, $language=null, $requires=null) {
-  Plugins::registerPlugin($id, $name, $version, $author, $website, $description, $language, $requires);
+function registerPlugin($id, $plugin) {
+  Plugins::registerPlugin($id, $plugin);
 }
 
 /**
- * Add a listener for an event
+ * Add a listener for an event. Should only be called in the initialize() method of the plugin.
  * 
  * @since 1.0
- * @param string $hook     the event
- * @param string $function the function to call on this event. Can also be as static class
- *                          function using the syntax "class::function"
- * @param array  $args     arguments to pass to the function after those supplied by the event
+ * @param string $hook        the event
+ * @param string $methodname  the plugin's non-static method to call on this event. 
+ * @param array  $args        arguments to pass to the function after those supplied by the event
  */
-function addListener($hook, $function, $args=null) {
-  Plugins::addListener($hook, $function, $args);
+function addListener($hook, $methodname, $args=null) {
+  Plugins::addListener($hook, $methodname, $args);
+}
+
+function hasListener($hook) {
+  return Plugins::hasListener($hook);
 }
 
 /**
