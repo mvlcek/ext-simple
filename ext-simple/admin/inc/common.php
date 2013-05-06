@@ -21,6 +21,7 @@ Init::definePaths();
 require_once(ES_ROOTPATH.'esconfig.php');
 require_once(ES_ADMINPATH.'inc/file.class.php');
 require_once(ES_ADMINPATH.'inc/settings.class.php');
+require_once(ES_ADMINPATH.'inc/plugins.php');
 
 class Init {
   
@@ -88,6 +89,12 @@ class Init {
           if ($_COOKIE[$cookiename] == $cookieval) {
             require_once(ES_ADMINPATH.'inc/user.class.php');
             self::$user = new User($username);
+            if (!self::isFrontend()) {
+              $timezone = self::$user->getTimezone();
+              if ($timezone) self::setTimezone($timezone);
+              $language = self::$user->getLanguage();
+              if ($language) self::setLanguage($language);
+            }
           }
         }
       }
@@ -96,7 +103,7 @@ class Init {
   }
   
   public static function isLoggedIn() {
-    return getUser() != null;
+    return self::getUser() != null;
   }
   
   public static function setLanguage($language) {
@@ -161,21 +168,28 @@ class Common {
   private static $styles = array();
   private static $scripts = array();
   
-  public static function loadLanguage($plugin=null, $defaultLanguage=null) {
-    if (@self::$i18n_loaded[$plugin]) return;
-    $path = $plugin ? ES_PLUGINSPATH.$plugin.'/lang/' : ES_ADMINPATH.'/lang';
-    $lang = Init::getLanguage();
-    if (!self::loadLanguageFile($plugin, $path.$lang) && strlen($lang) > 2) {
-      self::loadLanguageFile($plugin, $path.substr($lang,0,2));
+  public static function loadLanguage($plugin=null) {
+    $id = $plugin ? $plugin->getId() : null;
+    if (!isset(self::$i18n_loaded[$id])) {
+      $path = $id ? ES_PLUGINSPATH.$id.'/lang/' : ES_ADMINPATH.'lang/';
+      $lang = Init::getLanguage();
+      if (self::loadLanguageFile($id, $path.$lang)) {
+        self::$i18n_loaded[$id] = true;
+      } else if (strlen($lang) > 2 && self::loadLanguageFile($id, $path.substr($lang,0,2))) {
+        self::$i18n_loaded[$id] = true;
+      } else if ($plugin && self::loadLanguageFile($id, $path.$plugin->getDefaultLanguage())) {
+        self::$i18n_loaded[$id] = true;
+      } else if (self::loadLanguageFile($id, $path.'en_US')) {
+        self::$i18n_loaded[$id] = true;
+      } else {
+        self::$i18n_loaded[$id] = false;
+      }
     }
-    if ($defaultLanguage != null) {
-      self::loadLanguageFile($plugin, $path.$defaultLanguage);
-    }
-    self::$i18n_loaded[$plugin] = true;
+    return (bool) self::$i18n_loaded[$id];
   }
   
-  private static function loadLanguageFile($plugin, $fileWithoutExt) {
-    $prefix = $plugin ? $plugin.'/' : '';
+  private static function loadLanguageFile($pluginId, $fileWithoutExt) {
+    $prefix = $pluginId ? $pluginId.'/' : '';
     if (file_exists($fileWithoutExt.'.properties')) {
       $subst = array("\\n"=>"\n", "\\\\"=>"\\", "\\\""=>"\"", "\\'"=>"'", 
                      "\\r"=>"\r", "\\t"=>"\t");
@@ -197,6 +211,7 @@ class Common {
           }
         }
       }
+      fclose($fh);
     } else if (file_exists($fileWithoutExt.'.php')) {
       $i18n = array();
       @include($fileWithoutExt.'.php'); 
@@ -207,24 +222,9 @@ class Common {
       }
       return true;
     }
+    return false;
   }
   
-  public static function loadPluginLanguage($plugin, $lang=null) {
-    global $LANG;
-    if (!$lang) $lang = $LANG;
-    if (!file_exists(ES_PLUGINSPATH.$plugin.'/lang/'.$lang.'.php')) {
-      return false;
-    }
-    $i18n = array();
-    @include(ES_PLUGINSPATH.$plugin.'/lang/'.$lang.'.php'); 
-    if (count($i18n) > 0) foreach ($i18n as $code => $text) {
-      if (!array_key_exists($plugin.'/'.$code, self::$i18n)) {
-        self::$i18n[$plugin.'/'.$code] = $text;
-      }
-    }
-    return true;
-  }
-
   public static function getString($name, $args=null) {
     if (array_key_exists($name, self::$i18n)) {
       $msg = self::$i18n[$name];
@@ -337,6 +337,11 @@ function put_s($name, $args) {
   echo Common::getString($name, $args);
 }
 
+function put_t($name, $args) {
+  $args = func_get_args();
+  array_shift($args);
+  echo htmlspecialchars(Common::getString($name, $args));
+}
 
 function put_time($time, $format=null, $default=null) {
   $time = is_numeric($time) ? (int) $time : strtotime($time);
@@ -411,6 +416,6 @@ function get_page_link($slug) {
     $link = execFilter('filter-link', array($link));
     return $link;
   } else {
-    
+    # TODO
   }
 }

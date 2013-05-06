@@ -13,61 +13,95 @@ require_once(ES_ADMINPATH.'inc/file.class.php');
 
 class TimeMachine extends XmlFile {
   
-  const ACTION_PREFIX_SAVE   = 'save-';
-  const ACTION_PREFIX_DELETE = 'delete-';
-  const ACTION_PREFIX_RENAME = 'rename-';
-  const ACTION_PREFIX_UNDO   = 'undo-';
-  const ACTION_PREFIX_REDO   = 'redo-';
+  const ACTION_CREATE = 'create'; # Parameter [filename]  
+  const ACTION_SAVE   = 'update'; # Parameter [filename, newFilename]
+  const ACTION_DELETE = 'delete'; # Parameter [filename]
   
   private static $actionLog = null;
   
   private $currentAction = null;
-  
-  private function __construct() {
-    parent::__construct(ES_BACKUPSPATH.'action-log.xml', '<actions></actions>');
-  }
-  
-  private function save() {
-    return $this->saveTo(ES_BACKUPSPATH.'action-log.xml');
-  }
   
   public static function getActionLog() {
     if (!self::$actionLog) self::$actionLog = new TimeMachine();
     return self::$actionLog;
   }
   
-  public static function backup($action, $messageKey, $undoMessageKey, $filename=null, $params=null) {
-    $actionLog = self::getActionLog();
-    if (!$actionLog->currentAction) {
-      $actions = $actionLog->root->action;
-      $id = count($actions) > 0 ? $actions[count($actions)-1]['id']+1 : 0;
-      $actionLog->currentAction = $actionLog->root->addChild('action');
-      $actionLog->currentAction->addAttribute('id', $id);
-    } else {
-      $id = $actionLog->currentAction['id'];
+  private function __construct() {
+    parent::__construct(ES_BACKUPSPATH.'action-log.xml', '<actions></actions>');
+  }
+
+  public function addAction($action, $params, $typeKey, $titleKey, $restoreSuccessKey=null, $restoreFailureKey=null) {
+    $actions = $this->getAll('action');
+    $id = 0;
+    foreach ($actions as $action) {
+      if ((int) $action->attribute('id') >= $id) $id = (int) $action->attribute('id')+1;
     }
-    $success = true;
-    $num = count($actionLog->currentAction->step);
-    $step = $actionLog->currentAction->addChild('step');
-    $step->addAttribute('num', $num);
-    $step->addChild('name', $action);
-    $step->addChild('message', $messageKey);
-    $step->addChild('undoMessage', $undoMessageKey);
+    $this->currentAction = $this->add('action', array('id'=>$id, 'action'=>$action, 'type'=>$typeKey, 'time'=>time()));
+    $this->currentAction->add('titleKey', null, $titleKey);
+    $this->currentAction->add('restoreSuccessKey', null, $restoreSuccessKey);
+    $this->currentAction->add('restoreFailureKey', null, $restoreFailureKey);
     if ($params) {
       if (!is_array($params)) $params = array($params);
-      foreach ($params as $param) $step->addChild('param', (string) $param);
+      foreach ($params as $param) $this->currentAction->add('param', null, (string) $param);
     }
-    if ($filename && substr($filename,0,strlen(ES_DATAPATH)) == ES_DATAPATH) {
-      $step->addChild('file', substr($filename,strlen(ES_DATAPATH)));
-      $backupname = ES_BACKUPSPATH.$id.'-'.$num.'-'.substr($filename,strlen(ES_DATAPATH));
-      DataDir::createDir(dirname($backupname));
-      $success = rename($filename, $backupname);
+    $success = execWhile('backup-'.$action, $params, null);
+    if ($success === null) {
+      $success = $this->processDefaultAction($id, null, $action, $params);
     }
     if ($success) {
-      execAction('before-action-save', array($actionLog));
-      return $actionLog->save();
+      return $this->save();
     }
     return false;
+  }
+  
+  public function addSubAction($action, $params) {
+    if (!$this->currentAction) return false;
+    $id = $this->currentAction->attribute('id');
+    $subActions = $this->currentAction->getAll('subAction');
+    $step = count($subActions)+1;
+    $subAction = $this->currentAction->add('subAction', array('step'=>$step, 'action'=>$action));
+    if ($params) {
+      if (!is_array($params)) $params = array($params);
+      foreach ($params as $param) $subAction->add('param', null, (string) $param);
+    }
+    $success = execWhile('backup-'.$action, $params, null);
+    if ($success === null) {
+      $success = $this->processDefaultAction($id, $step, $action, $params);
+    }
+    if ($success) {
+      return $this->save();
+    }
+    return false;
+  }
+
+  public function processDefaultAction($id, $step, $action, $params) {
+    switch ($action) {
+      case 'create':
+        return true;
+      case 'update':
+      case 'delete': 
+        $filename = $params[0];
+        if (file_exists($filename)) {
+          $backupFilename = ES_BACKUPSPATH.$id.'-'.($step ? $step.'-' : '').basename($filename);
+          return rename($filename, $backupFilename);
+        }
+    }
+  }
+  
+  public function undo($id) {
+    $undoAction = $this->get('action', array('id'=>$id));
+    if (!$undoAction) return false;
+    
+  }
+
+  private function backup($type, $filename, $params=null, $backupMessageKey=null, $restoreMessageKey=null) {
+  }
+
+  
+  
+  public static function backup($filename, $params=null, $backupMessageKey=null, $restoreMessageKey=null) {
+    $result = $actionLog->backup($filename, $params, $backupMessageKey, $restoreMessageKey);
+    execAction();
   }
   
   public static function restore($id) {

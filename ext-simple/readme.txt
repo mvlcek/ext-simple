@@ -33,6 +33,7 @@ Actions, Filters, etc.:
       after-navigation
       before-content
       filter-content($content) => (un)modified content
+      replace-placeholder-xxx($name, $params, $prefix, $suffix) => replacement string
       after-content
       before-footer
       put-footer() => true, if done
@@ -57,18 +58,18 @@ Actions, Filters, etc.:
       after-admin-footer
     Pages:
       create-page
-      get-page-slug
       edit-page-options($page)
       edit-page-content($page)
       edit-page-extras($page)
-      get-page-slug($page)
       before-save-page($page)
-      after-save-page($page)
-      undo-save-page($slug)
+      after-save-page($page, $old-slug)
       after-delete-page($slug)
-      undo-delete-page($slug)
-      after-rename-page($slug, $newSlug)
-      undo-rename-page($oldSlug, $slug)
+      after-restore-page($slug)
+    Navigation:
+      before-save-navigation($navigation)
+      after-save-navigation($navigation)
+      after-delete-navigation($name)
+      after-restore-navigation($name)
     Components:
       edit-component-extras($component)
       get-component-slug($component)
@@ -84,9 +85,8 @@ Actions, Filters, etc.:
       edit-file-extras
       before-save-file
       after-save-file
-      undo-save-file
       after-delete-file
-      undo-delete-file
+      after-restore-file
     Theme:
       after-save-theme
       undo-save-theme
