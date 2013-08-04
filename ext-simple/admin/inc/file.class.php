@@ -103,6 +103,10 @@ class XmlFile extends DataFile {
     return $this->root->getAll($name, $attrs);
   }
   
+  public function add($name, $attrs=null, $value=null) {
+    return $this->root->add($name, $attrs, $value);
+  }
+  
   public function set($name, $attrs=null, $value=null) {
     return $this->root->set($name, $attrs, $value);
   }

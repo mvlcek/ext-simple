@@ -14,10 +14,10 @@ Options -Indexes
 
 RewriteEngine on
 
-# Usually it RewriteBase is just '/', but 
-# replace it with your subdirectory path
+# Usually RewriteBase is just '/', or replace it with your subdirectory path
 RewriteBase /
 
-RewriteCond %{REQUEST_FILENAME} -f
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 RewriteRule ^(.*)$ index.php/$1 [L]
