@@ -7,13 +7,19 @@
 # | License: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)          |
 # +--------------------------------------------------------------------+
 
+require_once(ES_ADMINPATH.'inc/plugins.class.php');
+
 class Log {
 
   static private function entry($level, $message, $params) {
-    $fh = fopen(ES_LOGSPATH.'extsimple.log', 'a');
-    $line = $level.' '.date('Y-m-d H:i:s.u').' '.sprintf($message, $params);
-    fwrite($fh, $line."\r\n");
-    fclose($fh);
+    $done = Plugins::execWhile('write-log', array($level, $message, $params), false);
+    if (!$done) {
+      $fh = fopen(ES_LOGSPATH.'extsimple.log', 'a');
+      $line = $level.' '.date('Y-m-d H:i:s.u').' '.sprintf($message, $params);
+      fwrite($fh, $line."\r\n");
+      fclose($fh);
+    }
+    Plugins::execAction('after-log', array($level, $message, $params));
   }
   
   static public function debug($message, $params) {
@@ -50,4 +56,3 @@ class Log {
   }
 
 }
-?>

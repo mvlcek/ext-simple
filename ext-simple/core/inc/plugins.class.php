@@ -74,11 +74,50 @@ class Plugins {
   private static $allowListeners = true;
 
   /**
-   * Loads all enabled plugins
+   * Returns the IDs of the enabled plugins in the order they are loaded.
+   * 
+   * @since 1.0
+   * @return array plugin IDs
+   */
+  public static function getEnabledPluginIds() {
+    if (file_exists(ES_SETTINGSPATH.'plugins.txt')) {
+      return file(ES_SETTINGSPATH.'plugins.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    }
+    return array();
+  }
+  
+  /**
+   * Enables a plugin. It will be loaded last.
+   * 
+   * @since 1.0
+   * @param string $id the id of the plugin to enable
+   */
+  public static function enablePlugin($id) {
+    $pluginIds = self::getEnabledPluginIds();
+    if (!in_array($id, $pluginIds)) $pluginIds[] = $id;
+    self::setEnabledPluginIds($pluginIds);
+  }
+
+  /**
+   * Disables a plugin. It will not be loaded any more.
+   * 
+   * @since 1.0
+   * @param string $id the id of the plugin to be disabled
+   */  
+  public static function disablePlugin($id) {
+    $pluginIds = self::getEnabledPluginIds();
+    $index = array_search($id, $pluginIds);
+    if ($index !== false) unset($pluginIds[$index]);
+    self::setEnabledPluginIds($pluginIds);
+  }
+
+  /**
+   * Loads all enabled plugins.
+   * 
    * @since 1.0
    */
   public static function loadPlugins() {
-    $enabledPluginIds = Plugins::getEnabledPluginIds();
+    $enabledPluginIds = self::getEnabledPluginIds();
     foreach ($enabledPluginIds as $id) {
       self::loadPlugin($id);
     }
@@ -88,6 +127,7 @@ class Plugins {
   
   /**
    * Loads a single plugin by id (regardless of whether it is enabled or not)
+   * 
    * @since 1.0
    * @param string $id the ID of the plugin
    */
@@ -100,55 +140,34 @@ class Plugins {
   }
 
   /**
-   * Returns the IDs of the enabled plugins in the order they are loaded
+   * Register a plugin. Must be called in the main plugin file.
+   * 
    * @since 1.0
-   * @return array plugin IDs
+   * @param AbstractPlugin $plugin   the plugin, an instance of a class extending AbstractPlugin
    */
-  public static function getEnabledPluginIds() {
-    if (file_exists(ES_SETTINGSPATH.'plugins.txt')) {
-      return file(ES_SETTINGSPATH.'plugins.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    }
-    return array();
-  }
-  
-  private static function setEnabledPluginIds($pluginIds=array()) {
-    return file_put_contents(ES_SETTINGSPATH.'plugins.txt', implode(PHP_EOL, $pluginIds)) !== false;
-  }
-
-  /**
-   * Enables a plugin. It will be loaded last.
-   * @since 1.0
-   * @param string $id the id of the plugin to enable
-   */
-  public static function enablePlugin($id) {
-    $pluginIds = self::getEnabledPluginIds();
-    if (!in_array($id, $pluginIds)) $pluginIds[] = $id;
-    self::setEnabledPluginIds($pluginIds);
-  }
-
-  /**
-   * Disables a plugin. It will not be loaded any more.
-   * @since 1.0
-   * @param string $id the id of the plugin to be disabled
-   */  
-  public static function disablePlugin($id) {
-    $pluginIds = self::getEnabledPluginIds();
-    $index = array_search($id, $pluginIds);
-    if ($index !== false) unset($pluginIds[$index]);
-    self::setEnabledPluginIds($pluginIds);
-  }
-
-  public static function getPlugin($id) {
-    return self::$plugins[$id];
-  }
-  
   public static function registerPlugin($plugin) {
     self::$plugins[self::$currentPluginId] = $plugin;
     $plugin->initialize(self::$currentPluginId);
   }
   
   /**
+   * Returns the plugin with the given ID
+   * 
+   * @since 1.0
+   * @param string $id  the plugin ID
+   * @return AbstractPlugin   the plugin with the given ID or null
+   */
+  public static function getPlugin($id) {
+    return self::$plugins[$id];
+  }
+  
+  function isInPlugin($name) {
+    return basename($_SERVER['PHP_SELF']) == 'load.php' && @$_GET['id'] == $name;
+  }
+
+  /**
    * Enable/disable adding of listeners.
+   * 
    * @since 1.0
    * @param bool $allow false, if requests for adding listeners should be ignored
    */
@@ -156,6 +175,14 @@ class Plugins {
     self::$allowListeners = $allow;
   }
   
+  /**
+   * Add a listener for an event. Should only be called in the initialize() method of the plugin.
+   * 
+   * @since 1.0
+   * @param string $hook        the event
+   * @param string $methodname  the plugin's non-static method to call on this event. 
+   * @param array  $args        arguments to pass to the function after those supplied by the event
+   */
   public static function addListener($hook, $methodname, $args=null) {
     if (!self::$allowListeners) return;
     if (!array_key_exists($hook, self::$listeners)) self::$listeners[$hook] = array();
@@ -166,25 +193,24 @@ class Plugins {
     );
   }
   
+  /**
+   * Indicates, whether there are listeners for a specific hook.
+   * 
+   * @since 1.0
+   * @param $hook  the name of the hook
+   * @returns bool true, if there are listeners for the hook
+   */
   public static function hasListener($hook) {
     return array_key_exists($hook, self::$listeners);
   }
   
-  private static function callListener($listener, $args) {
-    #if (is_debug()) Log::debug('Calling listener %s of plugin %s.', $listener['function'], $listener['plugin']);
-    $functionname = $listener['method'];
-    if (($pos = strpos($functionname,'::')) !== false) {
-      if ($pos == 0) {
-        $function = substr($functionname,2);
-      } else {
-        $function = array(substr($functionname,0,$pos), substr($functionname,$pos+2));
-      } 
-    } else {
-      $function = array(self::$plugins[$listener['pluginId']], $functionname);
-    }
-    return self::call_user_func_array($function, array_merge($args, $listener['args']));
-  }
-  
+  /**
+   * Calls all registered listeners for an event, optionally passing parameters
+   * 
+   * @since 1.0
+   * @param string $hook the event
+   * @param array  $args the parameters to pass to the listeners
+   */
   public static function execAction($hook, $args=null) {
     if (!isset(self::$listeners[$hook])) return null;
     if ($args === null) $args = array(); else if (!is_array($args)) $args = array($args);
@@ -193,6 +219,15 @@ class Plugins {
     }
   }
   
+  /**
+   * Calls all registered listeners for an event to filter a value
+   * 
+   * @since 1.0
+   * @param string $hook the event
+   * @param array  $args the parameters to pass to the listeners. There must be at least
+   *                      one parameter, which is the value being filtered
+   * @return mixed the filtered value
+   */
   public static function execFilter($hook, $args=null) {
     if (!isset(self::$listeners[$hook]) || $args === null) return null;
     if (!is_array($args)) $args = array($args);
@@ -202,6 +237,16 @@ class Plugins {
     return $args[0];
   }
 
+  /**
+   * Calls all registered listeners for an event, optionally passing parameters,
+   * until the return value of one listener is the given one
+   * 
+   * @since 1.0
+   * @param string $hook       the event
+   * @param array  $args       the parameters to pass to the listeners
+   * @param any    $untilValue the value, at which the calling of listeners is aborted
+   * @return mixed the $untilValue or null, if none of the listeners returns this value
+   */
   public static function execUntil($hook, $args=null, $untilValue=null) {
     if (!isset(self::$listeners[$hook])) return null;
     if ($args === null) $args = array(); else if (!is_array($args)) $args = array($args);
@@ -213,6 +258,18 @@ class Plugins {
     return null;
   }
   
+  /**
+   * Calls all registered listeners for an event, optionally passing parameters,
+   * while the return value of one listener is the given one
+   * 
+   * @since 1.0
+   * @param string $hook       the event
+   * @param array  $args       the parameters to pass to the listeners
+   * @param any    $whileValue if the return value of a listener is different than this
+   *                            value, the calling of listeners is aborted
+   * @return mixed the return value of the first listener returning another value than the
+   *                $whileValue, or the $whileValue
+   */
   public static function execWhile($hook, $args=null, $whileValue=null) {
     if (!isset(self::$listeners[$hook])) return null;
     if ($args === null) $args = array(); else if (!is_array($args)) $args = array($args);
@@ -224,6 +281,15 @@ class Plugins {
     return $whileValue;
   }
   
+  /**
+   * Calls all registered listeners for an event, optionally passing parameters.
+   * All return values of the listeners are combined into one array.
+   * 
+   * @since 1.0
+   * @param string $hook       the event
+   * @param array  $args       the parameters to pass to the listeners
+   * @return array  the return values of the listener combined into one array
+   */
   public static function execForInfo($hook, $args=null) {
     if (!isset(self::$listeners[$hook])) return array();
     if ($args === null) $args = array(); else if (!is_array($args)) $args = array($args);
@@ -238,10 +304,21 @@ class Plugins {
     return $info;
   }
   
+  /**
+   * Filters the content by extracting all placeholders (% name param* %)
+   * The placeholders are the passed to the listeners registered for hook replace-placeholder-<name>
+   * and replaced with their return value.
+   * 
+   * @since 1.0
+   * @param string $content the original content
+   * @return string the filtered content
+   */
   public static function filterContentPlaceholders($content) {
     return preg_replace_callback("/(<p(?:\s[^>]*)>\s*)?\(%\s*([A-Za-z][A-Za-z0-9_-]*)(\s+(?:[^%]|%[^\)])+)?\s*%\)(\s*<\/p>)?/", 
                                  array('Plugins','replacePlaceholder'), $content);
   }
+  
+  # ===== private functions =====
   
   public static function replacePlaceholder($match) {
     $prefix = $match[1];
@@ -260,92 +337,24 @@ class Plugins {
     return $replacement !== null ? (string) $replacement : $match[0];
   }
   
+  private static function setEnabledPluginIds($pluginIds=array()) {
+    return file_put_contents(ES_SETTINGSPATH.'plugins.txt', implode(PHP_EOL, $pluginIds)) !== false;
+  }
+
+  private static function callListener($listener, $args) {
+    #if (is_debug()) Log::debug('Calling listener %s of plugin %s.', $listener['function'], $listener['plugin']);
+    $functionname = $listener['method'];
+    if (($pos = strpos($functionname,'::')) !== false) {
+      if ($pos == 0) {
+        $function = substr($functionname,2);
+      } else {
+        $function = array(substr($functionname,0,$pos), substr($functionname,$pos+2));
+      } 
+    } else {
+      $function = array(self::$plugins[$listener['pluginId']], $functionname);
+    }
+    return self::call_user_func_array($function, array_merge($args, $listener['args']));
+  }
+  
 }
 
-/**
- * Register a plugin. Must be called in the main plugin file.
- * 
- * @since 1.0
- * @param Plugin $plugin   the plugin, an instance of a class extending AbstractPlugin
- */
-function registerPlugin($id, $plugin) {
-  Plugins::registerPlugin($id, $plugin);
-}
-
-/**
- * Add a listener for an event. Should only be called in the initialize() method of the plugin.
- * 
- * @since 1.0
- * @param string $hook        the event
- * @param string $methodname  the plugin's non-static method to call on this event. 
- * @param array  $args        arguments to pass to the function after those supplied by the event
- */
-function addListener($hook, $methodname, $args=null) {
-  Plugins::addListener($hook, $methodname, $args);
-}
-
-function hasListener($hook) {
-  return Plugins::hasListener($hook);
-}
-
-/**
- * Calls all registered listeners for an event, optionally passing parameters
- * 
- * @since 1.0
- * @param string $hook the event
- * @param array  $args the parameters to pass to the listeners
- */
-function execAction($hook, $args=null) {
-  Plugins::execAction($hook, $args);
-}
-
-/**
- * Calls all registered listeners for an event to filter a value
- * 
- * @since 1.0
- * @param string $hook the event
- * @param array  $args the parameters to pass to the listeners. There must be at least
- *                      one parameter, which is the value being filtered
- * @return mixed the filtered value
- */
-function execFilter($hook, $args=null) {
-  return Plugins::execFilter($hook, $args);
-}
-
-/**
- * Calls all registered listeners for an event, optionally passing parameters,
- * until the return value of one listener is the given one
- * 
- * @since 1.0
- * @param string $hook       the event
- * @param array  $args       the parameters to pass to the listeners
- * @param any    $untilValue the value, at which the calling of listeners is aborted
- * @return mixed the $untilValue or null, if none of the listeners returns this value
- */
-function execUntil($hook, $args=null, $untilValue=null) {
-  return Plugins::execUntil($hook, $args, $untilValue);
-}
-
-/**
- * Calls all registered listeners for an event, optionally passing parameters,
- * while the return value of one listener is the given one
- * 
- * @since 1.0
- * @param string $hook       the event
- * @param array  $args       the parameters to pass to the listeners
- * @param any    $whileValue if the return value of a listener is different than this
- *                            value, the calling of listeners is aborted
- * @return mixed the return value of the first listener returning another value than the
- *                $whileValue, or the $whileValue
- */
-function execWhile($hook, $args=null, $whileValue=null) {
-  return Plugins::execWhile($hook, $args, $whileValue);
-}
-
-function execForInfo($hook, $args=null) {
-  return Plugins::execForInfo($hook, $args);
-}
-
-function isInPlugin($name) {
-  return basename($_SERVER['PHP_SELF']) == 'load.php' && @$_GET['id'] == $name;
-}

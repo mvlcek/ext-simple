@@ -19,9 +19,10 @@ if (get_magic_quotes_gpc()) {
 
 Init::definePaths();
 require_once(ES_ROOTPATH.'esconfig.php');
-require_once(ES_ADMINPATH.'inc/file.class.php');
-require_once(ES_ADMINPATH.'inc/settings.class.php');
-require_once(ES_ADMINPATH.'inc/plugins.php');
+require_once(ES_COREPATH.'inc/file.class.php');
+require_once(ES_COREPATH.'inc/user.class.php');
+require_once(ES_COREPATH.'inc/settings.class.php');
+require_once(ES_COREPATH.'inc/plugins.class.php');
 
 class Init {
   
@@ -33,25 +34,23 @@ class Init {
   
   public static function definePaths() {
     $pos = strrpos(dirname(__FILE__),DIRECTORY_SEPARATOR.'inc');
-    $adm = substr(dirname(__FILE__), 0, $pos);
-    define('ES_ADMINPATH', $adm.'/');
-    $pos = strrpos($adm,DIRECTORY_SEPARATOR);
-    if (!defined('ES_ADMIN')) {
-      define('ES_ADMIN', substr($adm,$pos+1));
-    } else if (ES_ADMIN != substr($adm,$pos+1)) {
-      Log::warning("ES_ADMIN is incorrectly defined: it is '%s', but should be '%s'!", ES_ADMIN, substr($adm,$pos+1));
-    }
-    $pos = strrpos($adm, DIRECTORY_SEPARATOR);
+    $core = substr(dirname(__FILE__), 0, $pos);
+    define('ES_COREPATH', $core.'/');
+    $pos = strrpos($core, DIRECTORY_SEPARATOR);
     define('ES_ROOTPATH', substr(__FILE__,0,$pos).'/');
+    define('ES_ADMINPATH', ES_ROOTPATH.'admin/');
+    define('ES_COREPATH', ES_ROOTPATH.'core/');
+    
     define('ES_DATAPATH', ES_ROOTPATH.'data/');
-    define('ES_CACHEPATH', ES_DATAPATH.'cache');
     define('ES_SETTINGSPATH', ES_DATAPATH.'settings/');
     define('ES_USERSPATH', ES_DATAPATH.'users/');
     define('ES_PAGESPATH', ES_DATAPATH.'pages/');
     define('ES_UPLOADSPATH', ES_DATAPATH.'uploads/');
     define('ES_THUMBNAILSPATH', ES_DATAPATH.'thumbs/');
     define('ES_LOGSPATH', ES_DATAPATH.'logs/');
+
     define('ES_BACKUPSPATH', ES_ROOTPATH.'backups/');
+    define('ES_CACHEPATH', ES_DATAPATH.'cache');
     define('ES_THEMESPATH', ES_ROOTPATH.'themes/');
     define('ES_PLUGINSPATH', ES_ROOTPATH.'plugins/');
   }
@@ -87,7 +86,7 @@ class Init {
         if (isset($_COOKIE[$cookiename])) {
           $cookieval = sha1($_SERVER['REMOTE_ADDR'].$username.Settings::getSalt());
           if ($_COOKIE[$cookiename] == $cookieval) {
-            require_once(ES_ADMINPATH.'inc/user.class.php');
+            require_once(ES_COREPATH.'inc/user.class.php');
             self::$user = new User($username);
             if (!self::isFrontend()) {
               $timezone = self::$user->getTimezone();
@@ -171,7 +170,7 @@ class Common {
   public static function loadLanguage($plugin=null) {
     $id = $plugin ? $plugin->getId() : null;
     if (!isset(self::$i18n_loaded[$id])) {
-      $path = $id ? ES_PLUGINSPATH.$id.'/lang/' : ES_ADMINPATH.'lang/';
+      $path = $id ? ES_PLUGINSPATH.$id.'/lang/' : ES_COREPATH.'lang/';
       $lang = Init::getLanguage();
       if (self::loadLanguageFile($id, $path.$lang)) {
         self::$i18n_loaded[$id] = true;
@@ -276,7 +275,7 @@ class Common {
   }
   
   public static function loadPlugins() {
-    require_once(ES_ADMINPATH.'inc/plugins.php');
+    require_once(ES_COREPATH.'inc/plugins.php');
     Plugins::loadPlugins();
   }
   

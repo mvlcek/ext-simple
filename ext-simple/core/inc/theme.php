@@ -7,13 +7,14 @@
 # | License: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)          |
 # +--------------------------------------------------------------------+
 
-require_once(ES_ADMINPATH.'inc/page.class.php');
-require_once(ES_ADMINPATH.'inc/plugins.php');
-require_once(ES_ADMINPATH.'inc/navigation.class.php');
+require_once(ES_COREPATH.'inc/page.class.php');
+require_once(ES_COREPATH.'inc/plugins.class.php');
+require_once(ES_COREPATH.'inc/navigation.class.php');
+require_once(ES_COREPATH.'inc/component.class.php');
 
 function put_header($type=null, $options=null) {
-  execAction('before-header');
-  $done = execWhile('put-header', array($type, $options), false);
+  Plugins::execAction('before-header');
+  $done = Plugins::execWhile('put-header', array($type, $options), false);
   if (!$done) {
     $page = Common::getPage();
     if ($page) {
@@ -45,18 +46,18 @@ function put_header($type=null, $options=null) {
     put_css();
     put_js();
   }
-  execAction('after-header');
+  Plugins::execAction('after-header');
 }
 
 function put_navigation($slug=null, $minlevel=0, $maxlevel=0, $type=null, $options=null) {
   if (!$slug) $slug = get_slug();
-  execAction('before-navigation');
+  Plugins::execAction('before-navigation');
   $args = array($slug, $minlevel, $maxlevel, $type, $options);
   $done = execWhile('put-navigation', $args, false);
   if (!$done) {
     // TODO
   }
-  execAction('after-navigation');
+  Plugins::execAction('after-navigation');
 }
 
 function put_title() {
@@ -64,21 +65,21 @@ function put_title() {
 }
 
 function put_content() {
-  execAction('before-content');
+  Plugins::execAction('before-content');
   $content = get_field('content');
   $content = execFilter('filter-content', array($content));
   echo $content;
-  execAction('after-content');
+  Plugins::execAction('after-content');
   return $content !== null && $content !== '';
 }
 
 function put_footer($type=null, $options=null) {
-  execAction('before-footer');
+  Plugins::execAction('before-footer');
   $done = execWhile('put-footer', array($type, $options), false);
   if (!$done) {
     // empty for now
   }
-  execAction('after-footer');
+  Plugins::execAction('after-footer');
 }
 
 function put_slug() {
@@ -113,7 +114,8 @@ function put_page_date_field($slug, $name, $format, $default=null) {
 }
 
 function put_component($name) {
-  
+  $component = 1;
+  // TODO
 }
 
 
@@ -142,6 +144,7 @@ function get_filtered_field($name) {
   return $page ? $page->getFilteredString($name, Common::getVariants()) : null;
 }
 
+
 if (!function_exists('get_page_field')) {
   function get_page_field($slug, $name) {
     $page = new Page($slug, true);
@@ -149,7 +152,7 @@ if (!function_exists('get_page_field')) {
   }
 }
 
-function get_page_field_as_timestamp($slug, $name) {
+function get_page_time_field($slug, $name) {
   $value = get_page_field($slug, $name);
   return !is_numeric($value) ? strtotime($value): (int) $value;  
 }

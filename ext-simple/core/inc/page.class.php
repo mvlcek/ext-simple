@@ -7,8 +7,8 @@
 # | License: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)          |
 # +--------------------------------------------------------------------+
 
-require_once(ES_ADMINPATH.'inc/file.class.php');
-require_once(ES_ADMINPATH.'inc/plugins.php');
+require_once(ES_COREPATH.'inc/file.class.php');
+require_once(ES_COREPATH.'inc/plugins.class.php');
 
 /**
  * A page contains the following standard fields:
@@ -46,21 +46,8 @@ class Page extends XmlSlugFile {
   
   private $fieldCache = array();
 
-  public static function existsPage($slug) {
-    return self::exists(ES_PAGESPATH, $slug);
-  }
-
-  public static function getPage($slug) {
-    $fileSlug = self::getFileSlug($slug);
-    if (array_key_exists($fileSlug)) {
-      return self::$cache[$fileSlug];
-    } else {
-      return self::$cache[$fileSlug] = new Page($slug);
-    }
-  }
-
   public function __construct($slug) {
-    parent::__construct(ES_PAGESPATH, $slug, '<page></page>');
+    parent::__construct($slug, 'pages', '<page></page>');
   }
   
   public function isPublic() {
@@ -84,36 +71,30 @@ class Page extends XmlSlugFile {
       return $this->fieldCache[$key];
     } else {
       $value = $this->getString($name, $variants);
-      $value = execFilter('filter-content', array($value, $name));
+      $value = Plugins::filterContentPlaceholders($value);
+      $value = Plugins::execFilter('filter-content', array($value, $name));
       $this->fieldCache[$key] = $value;
       return $value;
     }
   }
   
-  public static function getFieldTypes($objType) {
-    // those field types are independent of the type of page ($objType)
-    return array(
-      'type' => self::FIELDTYPE_ENUM,
-      'visibility' => self::FIELDTYPE_ENUM,
-      'template' => self::FIELDTYPE_REF,
-      'parent' => self::FIELDTYPE_REF,
-      'previous' => self::FIELDTYPE_REF,
-      'menuState' => self::FIELDTYPE_ENUM,
-      'title' => self::FIELDTYPE_TEXT,
-      'description' => self::FIELDTYPE_TEXT,
-      'tags' => self::FIELDTYPE_LIST,
-      'content' => self::FIELDTYPE_HTML,
-      'menuText' => self::FIELDTYPE_TEXT,
-      'createdAt' => self::FIELDTYPE_DATE,
-      'createdBy' => self::FIELDTYPE_USER,
-      'modifiedAt' => self::FIELDTYPE_DATE,
-      'modifiedBy' => self::FIELDTYPE_USER,
-      'publishFrom' => self::FIELDTYPE_DATE,
-      'publishUntil' => self::FIELDTYPE_DATE
-    );
+  # ===== static functions =====
+  
+  public static function existsPage($slug) {
+    return self::existsSlugFile($slug, 'pages');
+  }
+
+  public static function getPage($slug) {
+    $fileSlug = self::getFileSlug($slug);
+    if (array_key_exists($fileSlug)) {
+      return self::$cache[$fileSlug];
+    } else {
+      return self::$cache[$fileSlug] = new Page($slug);
+    }
+  }
+  
+  public static function deletePage($slug) {
+    return self::deleteSlugFile($slug, 'pages');
   }
 
 }
-
-
-addListener('get-fieldtypes-pages', 'Page::getFieldTypes');

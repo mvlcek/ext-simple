@@ -7,7 +7,7 @@
 # | License: GPLv3 (http://www.gnu.org/licenses/gpl-3.0.html)          |
 # +--------------------------------------------------------------------+
 
-require_once(ES_ADMINPATH.'inc/plugins.php');
+require_once(ES_COREPATH.'inc/plugins.class.php');
 
 /**
  * The Link class provides function to construct fancy URLS from parameters
@@ -53,7 +53,7 @@ class Link {
         $itemNames[] = $match[2][0];
       }
       // get the patterns for the items
-      $itemInfo = execForInfo('get-link-patterns', array($itemNames));
+      $itemInfo = Plugins::execForInfo('get-link-patterns', array($itemNames));
       $itemPatterns = array_merge($itemPatterns, $itemInfo);
       // create a pattern to parse the link
       $pattern = '"^';
@@ -103,7 +103,7 @@ class Link {
         $itemNames[] = $match[2][0];
       }
       // get the values for the place holders
-      $itemInfo = execForInfo('get-link-values', array($itemNames));
+      $itemInfo = Plugins::execForInfo('get-link-values', array($itemNames));
       $itemValues = array_merge($itemValues, $itemInfo);
       // format link
       $pos = 0;

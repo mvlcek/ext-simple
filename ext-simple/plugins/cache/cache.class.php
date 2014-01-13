@@ -95,7 +95,7 @@ class Cache extends XmlFile {
     return is_numeric($value) ? (int) $value : strtotime($value);
   }
   
-  public function filterPageSlugs($slugs, $variant, $name, $op, $value) {
+  public function filterPageSlugs($slugs, $variant, $name, $op, $value=null) {
     $params = func_get_args();
     $slugs = array_shift($params);
     $variant = array_shift($params);

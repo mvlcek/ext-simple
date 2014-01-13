@@ -1,2 +1,3 @@
 <?php
-echo "X";
+require_once("inc/admin.php");
+

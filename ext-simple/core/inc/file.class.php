@@ -9,11 +9,10 @@
 
 if(!defined('IN_ES')) die('You cannot load this page directly.'); 
 
-require_once(ES_ADMINPATH.'inc/log.class.php');
-require_once(ES_ADMINPATH.'inc/plugins.php');
-require_once(ES_ADMINPATH.'inc/transliteration.class.php');
+require_once(ES_COREPATH.'inc/log.class.php');
+require_once(ES_COREPATH.'inc/transliteration.class.php');
 
-class DataFile {
+class FileUtils {
 
   static public function isFileInPath($filename, $path) {
     $dirname = dirname($filename);
@@ -21,7 +20,7 @@ class DataFile {
   }
   
   static public function checkFileName($filename) {
-    if (strpos($filename,'..') !== false) {
+    if (strpos($filename,'..') !== false || strpos($filename, ES_ROOTPATH) !== 0) {
       Log::error('Invalid filename %s!', $filename);
       die("Invalid path $filename!");
     }
@@ -36,6 +35,12 @@ class DataFile {
   static public function deleteFile($filename) {
     self::checkFileName($filename);
     return unlink($filename);
+  }
+  
+  static public function setDirAttributes($dirname) {
+    self::checkFileName($dirname);
+    if (defined('ES_DIR_MOD')) @chmod($dirname, ES_DIR_MOD); elseif (defined('ES_FILE_MOD')) @chmod($dirname, ES_FILE_MOD);
+    if (defined('ES_DIR_OWNER')) @chown($dirname, ES_DIR_OWNER); elseif (defined('ES_FILE_OWNER')) @chown($dirname, ES_FILE_OWNER);
   }
   
   static public function createDir($dirname) {
@@ -66,12 +71,17 @@ class DataFile {
         closedir($dir);
       }
       return rmdir($dirname);    
+    } elseif (file_exists($dirname)) {
+      return false;
+    } else {
+      return true;
     }
   }
+  
 }
 
 
-class XmlFile extends DataFile {
+class XmlFile {
 
   private $new = false;
   private $filename = null;
@@ -130,6 +140,7 @@ class XmlFile extends DataFile {
   
 }
 
+
 class XmlSlugFile extends XmlFile {
 
   public function __construct($slug, $type='pages', $rootElement='<root></root>') {
@@ -178,21 +189,23 @@ class XmlSlugFile extends XmlFile {
     return $this->root->set($name, $variant ? array('variant'=>$variant) : null, $value);
   }
   
-  public static function exists($slug, $type='pages') {
+  # ===== static methods =====
+  
+  public static function existsSlugFile($slug, $type='pages') {
     return file_exists(ES_DATAPATH.$type.'/'.self::getFileSlug($slug).'.xml');    
   }
   
-  public static function delete($slug, $type='pages') {
-    return self::deleteFile(ES_DATAPATH.$type.'/'.self::getFileSlug($slug).'.xml', true);
+  public static function deleteSlugFile($slug, $type='pages') {
+    return FileUtils::deleteFile(ES_DATAPATH.$type.'/'.self::getFileSlug($slug).'.xml', true);
   }
   
   public static function getFileSlug($slug) {
     return Transliteration::get($slug);
   }
   
-  public static function listFileSlugs($path) {
+  public static function listFileSlugs($type='pages') {
     $slugs = array();
-    $dir = opendir($path);
+    $dir = opendir(ES_DATAPATH.$type);
     if ($dir) while (($filename = readdir($dir)) !== false) {
       if (substr($filename,-4) == '.xml') $slugs[] = substr($filename,0,-4);
     }
@@ -206,7 +219,7 @@ class XmlSlugFile extends XmlFile {
 class ExtendedXMLElement extends SimpleXMLElement{   
 
   /**
-   * return string the value of the attribute
+   * @return string the value of the attribute
    */
   public function attribute($name) {
     return @$this[$name];
